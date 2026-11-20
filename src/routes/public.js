@@ -90,12 +90,15 @@ router.post('/t/:token', (req, res) => {
 // texto llega como mensaje a Portilla Law dentro del portal.
 const CONFIRM_WORDS = ['SI', 'SÍ', 'S', 'YES', '1', 'CONFIRMO', 'CONFIRMAR', 'OK'];
 const STOP_WORDS = ['STOP', 'PARAR', 'BAJA', 'CANCELAR', 'UNSUBSCRIBE', 'ALTO'];
+const HELP_WORDS = ['HELP', 'AYUDA', 'INFO'];
+const HELP_REPLY = `Portilla Law: Notificaciones del Programa de Aprendizaje. Ayuda: ${process.env.SUPPORT_EMAIL || 'gcalderin@portillalaw.com'}. Responde STOP para cancelar. Pueden aplicar cargos por mensajes y datos.`;
 function handleInbound(fromPhone, rawText, channel) {
   const from = String(fromPhone || '').replace(/\D/g, '').slice(-10);
   const text = String(rawText || '').trim();
   const word = text.toUpperCase().replace(/[.!¡]/g, '').trim();
   const label = channel === 'whatsapp' ? 'WhatsApp' : 'SMS';
   const u = from && db.prepare("SELECT * FROM users WHERE active = 1 AND substr(replace(replace(replace(replace(replace(phone,'-',''),' ',''),'(',''),')',''),'+',''), -10) = ?").get(from);
+  if (HELP_WORDS.includes(word)) return HELP_REPLY;
   if (!u) return 'Portilla Law: no pudimos identificar tu número. Comunícate con nosotros.';
   if (STOP_WORDS.includes(word)) {
     db.prepare(`UPDATE users SET ${channel === 'whatsapp' ? 'notify_whatsapp' : 'notify_sms'} = 0 WHERE id = ?`).run(u.id);

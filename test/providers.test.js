@@ -69,6 +69,7 @@ test('respuestas: SI confirma, STOP detiene el canal, otro texto llega a Portill
   assert.match(handleInbound('7875551002', 'STOP', 'sms'), /no recibirás más mensajes por SMS/);
   assert.strictEqual(db.prepare('SELECT notify_sms FROM users WHERE id = 1').get().notify_sms, 0);
   assert.match(handleInbound('7870000000', 'SI', 'sms'), /no pudimos identificar/);
+  assert.match(handleInbound('7870000000', 'AYUDA', 'sms'), /STOP para cancelar/);
 });
 
 test('webhooks: token de Heymarket y firma/verificación de WhatsApp', async () => {
