@@ -16,7 +16,8 @@ router.get('/login', (req, res) => {
 });
 router.post('/login', (req, res) => {
   const email = String(req.body.email || '').trim().toLowerCase();
-  const next = String(req.body.next || '/').startsWith('/') ? req.body.next : '/';
+  const rawNext = String(req.body.next || '/');
+  const next = rawNext.startsWith('/') && !rawNext.startsWith('//') && !rawNext.startsWith('/\\') ? rawNext : '/';
   const key = `${req.ip}:${email}`;
   const tries = attempts.get(key) || { n: 0, until: 0 };
   if (tries.until > Date.now()) return res.status(429).render('login', { title: 'Iniciar sesión', error: 'Demasiados intentos. Espere 15 minutos.', email, next });

@@ -2,7 +2,7 @@
 const express = require('express');
 const { db, getSetting, setSetting, audit, DEFAULT_SETTINGS } = require('../db');
 const { requireRole, requireStaff } = require('../auth');
-const { channelsStatus } = require('../services/notify');
+const { channelsStatus, notifyUser } = require('../services/notify');
 const compliance = require('../services/compliance');
 
 const router = express.Router();
@@ -49,6 +49,18 @@ router.post('/settings/run-now', requireStaff, async (req, res) => {
   const r = await compliance.tick();
   req.flash('ok', `Motor de cumplimiento ejecutado (${r.processed ?? 0} asignaciones revisadas).`);
   res.redirect(req.get('referer') || '/');
+});
+
+// Prueba de conexiones: envía un email y un SMS de prueba al usuario actual
+router.post('/settings/test-notify', requireRole('admin'), async (req, res) => {
+  const r = await notifyUser({ ...req.user, notify_email: 1, notify_sms: 1, active: 1 }, {
+    kind: 'prueba', subject: 'Prueba de conexión — Portal Portilla Law',
+    text: 'Si recibe este mensaje, el envío automático de recordatorios está funcionando.',
+    sms: 'Portilla Law: prueba de SMS del portal de cumplimiento. Funciona correctamente.',
+  });
+  const txt = r.map((x) => `${x.channel.toUpperCase()}: ${x.status}${x.error ? ' (' + x.error + ')' : ''}`).join(' · ') || 'Sin canales (añada su teléfono en Mi cuenta para probar SMS).';
+  req.flash(r.some((x) => x.status === 'fallido') ? 'error' : 'ok', `Prueba enviada a ${req.user.email} / ${req.user.phone || 'sin teléfono'} → ${txt}`);
+  res.redirect('/settings');
 });
 
 module.exports = router;

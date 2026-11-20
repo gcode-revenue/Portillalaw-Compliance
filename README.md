@@ -61,6 +61,11 @@ views/                     plantillas EJS (español)
 
 ## Producción
 
+Guía paso a paso (Render, dominio `portal.portillalaw.com`, email y SMS): **[DEPLOY.md](DEPLOY.md)**.
+
+- En el primer arranque, si no hay usuarios, se crea la cuenta del presidente con `ADMIN_EMAIL` / `ADMIN_PASSWORD`.
+- Configuración → *Enviarme un email y SMS de prueba* verifica las conexiones.
+
 - Definir `APP_SECRET`, `APP_URL`, `COOKIE_SECURE=true` y servir detrás de HTTPS.
 - Una sola instancia del proceso (el motor de cumplimiento corre dentro de la app).
 - Respaldar `data/portilla.db` diariamente.

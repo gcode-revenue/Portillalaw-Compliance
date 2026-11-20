@@ -1,5 +1,9 @@
 <%- include('partials/head') %>
 <div class="pagehead"><div><h1>Configuración de automatizaciones</h1><p class="sub">Email: <b><%= channels.email %></b> · SMS: <b><%= channels.sms %></b> · <a href="/audit">Registro de auditoría</a></p></div></div>
+<div class="card" style="max-width:760px"><h2>Conexiones de email y SMS</h2>
+  <p class="small">Email: <b><%= channels.email %></b> · SMS: <b><%= channels.sms %></b>. Las credenciales se configuran como variables de entorno en el servidor (ver DEPLOY.md).</p>
+  <form method="post" action="/settings/test-notify"><button class="btn ok">Enviarme un email y SMS de prueba</button></form>
+</div>
 <form method="post" action="/settings" class="card" style="max-width:760px">
   <% Object.entries(EDITABLE).forEach(function([k, label]){ %>
     <label><%= label %></label><input name="<%= k %>" value="<%= values[k] %>"><div class="small muted">Valor por defecto: <%= DEFAULT_SETTINGS[k] %></div>
