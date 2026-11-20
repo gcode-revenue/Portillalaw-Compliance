@@ -1,0 +1,50 @@
+<%- include('partials/head') %>
+<div class="pagehead">
+  <div><h1><%= c.name %></h1><p class="sub"><%= c.program_name %> · <span class="pill"><%= PROPOSAL_STATUS[c.proposal_status] || c.proposal_status %></span></p></div>
+  <div class="noprint">
+    <a class="btn" href="/users/new?role=employee&company=<%= c.id %>">+ Empleado</a>
+    <% if (isStaff) { %>
+      <a class="btn ghost" href="/users/new?role=employer&company=<%= c.id %>">+ Patrono</a>
+      <a class="btn ghost" href="/trainings/new?company=<%= c.id %>">+ Entrenamiento</a>
+      <a class="btn ghost" href="/companies/<%= c.id %>/edit">Editar</a>
+    <% } %>
+    <a class="btn ghost" href="/reports/weekly/<%= c.id %>">Reporte semanal</a>
+  </div>
+</div>
+<div class="grid g4">
+  <div class="card"><%- include('partials/gauge', { pct: prog.avg, label: 'Progreso promedio' }) %></div>
+  <div class="stat"><b><%= prog.total %></b><span>Empleados activos</span></div>
+  <div class="stat"><b style="color:#1b7f4b"><%= prog.compliant %></b><span>En cumplimiento</span></div>
+  <div class="stat"><b style="color:<%= prog.openAlerts ? '#b42318' : '#1b7f4b' %>"><%= prog.openAlerts %></b><span>Alertas abiertas</span></div>
+</div>
+<div class="grid g2">
+  <div class="card"><h2>Contacto</h2>
+    <div><%= c.contact_name || '—' %></div><div class="small muted"><%= c.contact_email || '' %> <%= c.contact_phone ? '· ' + c.contact_phone : '' %></div><div class="small muted"><%= c.address || '' %></div>
+    <% if (isStaff && c.proposal_notes) { %><h3>Notas</h3><div class="small msgbody"><%= c.proposal_notes %></div><% } %>
+  </div>
+  <div class="card"><h2>Patronos con acceso</h2>
+    <% employers.forEach(function(e){ %><div><%= e.name %> <span class="small muted">· <%= e.email %> <%= e.phone ? '· ' + e.phone : '' %></span>
+      <% if (isStaff) { %><a class="small" href="/messages/new?to=<%= e.id %>">mensaje</a> · <a class="small" href="/users/<%= e.id %>/edit">editar</a><% } %></div><% }) %>
+    <% if (!employers.length) { %><p class="muted">Sin patrono registrado. <% if (isStaff) { %><a href="/users/new?role=employer&company=<%= c.id %>">Añadir</a><% } %></p><% } %>
+  </div>
+</div>
+<div class="card"><h2>Empleados</h2>
+  <div class="tablewrap"><table>
+  <tr><th>Empleado</th><th>Progreso</th><th>Horas</th><th>Asistencia</th><th>Pend. reporte</th><th>Ausencias</th><th>Estado</th><th></th></tr>
+  <% prog.employees.forEach(function(e){ %>
+  <tr><td><a href="/employees/<%= e.id %>"><%= e.name %></a><div class="small muted"><%= e.job_title || '' %></div></td>
+    <td style="min-width:150px"><%- include('partials/bar', { pct: e.progress.pct }) %></td><td><%= e.progress.completedHours %>/<%= e.progress.target %></td>
+    <td><%= e.progress.attendancePct %>%</td><td><%= e.progress.counts.pendiente_reporte %></td><td><%= e.progress.counts.ausente %></td>
+    <td><%- e.progress.inCompliance ? '<span class="pill okc">OK</span>' : '<span class="pill badc">Atención</span>' %></td>
+    <td class="nowrap small"><a href="/messages/new?to=<%= e.id %>">mensaje</a></td></tr>
+  <% }) %>
+  <% if (!prog.employees.length) { %><tr><td colspan="8" class="muted">Sin empleados.</td></tr><% } %>
+  </table></div>
+  <% if (inactive.length) { %><details class="mt"><summary><%= inactive.length %> empleado(s) inactivo(s)</summary><% inactive.forEach(function(e){ %><div class="small"><a href="/employees/<%= e.id %>"><%= e.name %></a></div><% }) %></details><% } %>
+</div>
+<div class="card"><h2>Entrenamientos</h2>
+  <div class="tablewrap"><table><tr><th>Fecha</th><th>Entrenamiento</th><th>Modalidad</th></tr>
+  <% trainings.forEach(function(t){ %><tr style="<%= t.cancelled ? 'text-decoration:line-through;opacity:.6' : '' %>"><td class="nowrap"><%= fmt(t.starts_at) %></td><td><a href="/trainings/<%= t.id %>"><%= t.title %></a></td><td><%= MODALITY_LABELS[t.modality] %></td></tr><% }) %>
+  <% if (!trainings.length) { %><tr><td colspan="3" class="muted">Sin entrenamientos.</td></tr><% } %></table></div>
+</div>
+<%- include('partials/foot') %>

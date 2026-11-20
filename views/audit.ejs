@@ -1,0 +1,6 @@
+<%- include('partials/head') %>
+<h1>Registro de auditoría</h1>
+<div class="card tablewrap"><table><tr><th>Fecha</th><th>Usuario</th><th>Acción</th><th>Entidad</th><th>Detalles</th></tr>
+<% list.forEach(function(a){ %><tr class="small"><td class="nowrap"><%= fmt(a.created_at) %></td><td><%= a.user_name || 'Sistema' %></td><td><%= a.action %></td><td><%= a.entity %> <%= a.entity_id || '' %></td><td class="muted"><%= a.details %></td></tr><% }) %>
+</table></div>
+<%- include('partials/foot') %>

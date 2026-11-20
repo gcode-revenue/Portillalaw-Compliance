@@ -1,0 +1,15 @@
+<form method="post" action="/assignments/<%= a.id %>/status" style="display:flex;gap:.3rem;flex-wrap:wrap;align-items:center;min-width:220px">
+  <select name="action" style="width:auto;padding:.25rem">
+    <% if (isStaff) { %>
+      <option value="presente">Marcar presente (verificado)</option>
+      <option value="completar">Marcar completado</option>
+      <option value="verificar">Verificar / aprobar reporte</option>
+      <option value="ausente">Marcar ausente</option>
+    <% } %>
+    <option value="excusar">Excusar ausencia</option>
+    <option value="nota">Sólo añadir nota</option>
+    <% if (isStaff) { %><option value="reabrir">Reabrir (reprogramar)</option><option value="quitar">Quitar asignación</option><% } %>
+  </select>
+  <input name="note" placeholder="Nota" style="width:120px;padding:.25rem">
+  <button class="btn sm">Aplicar</button>
+</form>

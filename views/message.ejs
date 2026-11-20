@@ -1,0 +1,8 @@
+<%- include('partials/head') %>
+<div class="card" style="max-width:800px">
+  <h1><%= m.subject || '(sin asunto)' %></h1>
+  <p class="sub">De <b><%= m.sender_name %></b> para <b><%= m.recipient_name %></b> · <%= fmt(m.created_at) %></p>
+  <div class="msgbody mt"><%= m.body %></div>
+  <div class="mt"><% if (m.sender_id && m.recipient_id === user.id) { %><a class="btn" href="/messages/new?reply=<%= m.id %>">Responder</a><% } %> <a class="btn ghost" href="/messages">Volver</a></div>
+</div>
+<%- include('partials/foot') %>

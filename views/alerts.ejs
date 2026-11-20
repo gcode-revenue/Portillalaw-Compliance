@@ -1,0 +1,17 @@
+<%- include('partials/head') %>
+<div class="pagehead"><div><h1>Alertas de cumplimiento</h1><p class="sub">Ausencias, asistencia sin confirmar y progress reports vencidos — generadas automáticamente</p></div></div>
+<div class="tabs"><a href="/alerts" class="<%= status === 'abierta' ? 'active' : '' %>">Abiertas</a><a href="/alerts?status=resuelta" class="<%= status === 'resuelta' ? 'active' : '' %>">Resueltas</a></div>
+<div class="card tablewrap"><table>
+  <tr><th>Fecha</th><th>Tipo</th><th>Empleado</th><th>Entrenamiento</th><th><%= status === 'abierta' ? 'Gestión' : 'Resolución' %></th></tr>
+  <% alerts.forEach(function(a){ %>
+  <tr><td class="nowrap small"><%= fmt(a.created_at) %></td><td><span class="pill <%= a.type === 'ausencia' ? 'ausente' : 'pendiente_reporte' %>"><%= TYPE_LABELS[a.type] %></span></td>
+    <td><a href="/employees/<%= a.employee_id %>"><%= a.emp_name %></a><div class="small muted"><%= a.company_name %> <%= a.emp_phone ? '· ' + a.emp_phone : '' %></div></td>
+    <td class="small"><%= a.training_title %><br><span class="muted"><%= fmt(a.starts_at) %></span></td>
+    <td><% if (status === 'abierta') { %>
+      <div class="small"><a href="/messages/new?to=<%= a.employee_id %>">✉ Escribir al empleado</a></div>
+      <form method="post" action="/alerts/<%= a.id %>/resolve" style="display:flex;gap:.3rem;margin-top:.3rem"><input name="resolution" placeholder="Gestión realizada (ej.: llamé, se reprogramó)" style="padding:.25rem .4rem"><button class="btn sm">Resolver</button></form>
+    <% } else { %><span class="small"><%= a.resolution %> <span class="muted">· <%= a.resolver || 'Sistema' %> · <%= fmt(a.resolved_at) %></span></span><% } %></td></tr>
+  <% }) %>
+  <% if (!alerts.length) { %><tr><td colspan="5" class="muted"><%= status === 'abierta' ? '✅ No hay alertas abiertas.' : 'Sin alertas resueltas.' %></td></tr><% } %>
+</table></div>
+<%- include('partials/foot') %>

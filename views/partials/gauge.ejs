@@ -1,0 +1,14 @@
+<%
+  const p = Math.max(0, Math.min(100, Number(pct) || 0));
+  const color = p >= 80 ? '#1b7f4b' : p >= 50 ? '#c98a00' : '#b42318';
+  const r = 80, cx = 100, cy = 100, len = Math.PI * r;
+%>
+<div class="gauge">
+  <svg viewBox="0 0 200 120" role="img" aria-label="Progreso <%= p %>%">
+    <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="#eef1f5" stroke-width="18" stroke-linecap="round"/>
+    <path d="M20 100 A80 80 0 0 1 180 100" fill="none" stroke="<%= color %>" stroke-width="18" stroke-linecap="round"
+      stroke-dasharray="<%= (len * p / 100).toFixed(1) %> <%= len.toFixed(1) %>"/>
+    <text x="100" y="92" text-anchor="middle" font-size="34" font-weight="700" fill="#1d2733"><%= p %>%</text>
+  </svg>
+  <div class="lbl"><%= typeof label !== 'undefined' ? label : 'Completado' %></div>
+</div>

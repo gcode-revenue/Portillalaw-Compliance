@@ -1,0 +1,35 @@
+<%- include('partials/head') %>
+<div class="pagehead">
+  <div><h1><%= emp.name %></h1><p class="sub"><%= emp.job_title || 'Empleado' %> · <a href="/companies/<%= emp.company_id %>"><%= emp.company_name %></a> · <%= emp.email %> <%= emp.phone ? '· ' + emp.phone : '' %></p></div>
+  <div class="noprint"><% if (user.id !== emp.id) { %><a class="btn" href="/messages/new?to=<%= emp.id %>">Enviar mensaje</a> <a class="btn ghost" href="/users/<%= emp.id %>/edit">Editar</a><% } %></div>
+</div>
+<div class="grid g4">
+  <div class="card"><%- include('partials/gauge', { pct: progress.pct, label: 'Completado' }) %></div>
+  <div class="stat"><b><%= progress.completedHours %>/<%= progress.target %></b><span>Horas completadas<%= progress.requiredHours ? ' (meta ' + progress.requiredHours + ' h)' : '' %></span></div>
+  <div class="stat"><b><%= progress.attendancePct %>%</b><span>Asistencia</span></div>
+  <div class="stat"><b><%- progress.inCompliance ? '<span style="color:#1b7f4b">En cumplimiento</span>' : '<span style="color:#b42318">Fuera de cumplimiento</span>' %></b><span><%= progress.counts.ausente %> ausencias · <%= progress.counts.pendiente_reporte %> reportes pendientes</span></div>
+</div>
+<% if (alerts.some(a => a.status === 'abierta')) { %><div class="card"><h2>⚠️ Alertas abiertas</h2>
+  <% alerts.filter(a => a.status === 'abierta').forEach(function(a){ %><div class="alert-item"><%= a.message %> <span class="small muted">· <%= fmt(a.created_at) %></span>
+    <form class="inline noprint" method="post" action="/alerts/<%= a.id %>/resolve"><input name="resolution" placeholder="Resolución / gestión realizada" style="width:260px;display:inline-block;padding:.25rem .4rem"> <button class="btn sm">Resolver</button></form></div><% }) %>
+</div><% } %>
+<div class="card"><h2>Entrenamientos y checklist de cumplimiento</h2>
+  <div class="tablewrap"><table>
+  <tr><th>Entrenamiento</th><th>Estado</th><th>Checklist</th><th>Progress report</th><% if (user.role !== 'employee') { %><th class="noprint">Acciones</th><% } %></tr>
+  <% assignments.forEach(function(a){ %>
+  <tr><td><a href="/trainings/<%= a.training_id %>"><%= a.title %></a><div class="small muted"><%= fmt(a.starts_at) %> · <%= MODALITY_LABELS[a.modality] %> · <%= a.hours_credit %> h</div>
+      <% if (a.notes) { %><div class="small msgbody muted"><%= a.notes %></div><% } %></td>
+    <td><span class="pill <%= a.status %>"><%= STATUS_LABELS[a.status] %></span></td>
+    <td><%- include('partials/checklist', { items: a.checklist }) %></td>
+    <td class="small" style="max-width:300px"><% if (a.report_id) { %><details><summary>Ver reporte (<%= fmt(a.report_at) %>)</summary>
+      <p><b>Aprendido:</b> <%= a.summary %></p><% if (a.applied_how) { %><p><b>Aplicación:</b> <%= a.applied_how %></p><% } %><% if (a.questions) { %><p><b>Preguntas:</b> <%= a.questions %></p><% } %><% if (a.rating) { %><p><b>Evaluación:</b> <%= a.rating %>/5</p><% } %>
+      <% if (a.review_notes) { %><p><b>Notas de revisión:</b> <%= a.review_notes %></p><% } %></details><% } else { %><span class="muted">—</span><% } %></td>
+    <% if (user.role !== 'employee') { %><td class="noprint"><%- include('partials/assignment_actions', { a: a }) %></td><% } %>
+  </tr>
+  <% }) %>
+  <% if (!assignments.length) { %><tr><td colspan="5" class="muted">Sin entrenamientos asignados.</td></tr><% } %>
+  </table></div>
+</div>
+<% if (comms.length) { %><div class="card"><h2>Comunicaciones recientes</h2><div class="tablewrap"><table><tr><th>Fecha</th><th>Tipo</th><th>Canal</th><th>Asunto</th><th>Estado</th></tr>
+  <% comms.forEach(function(n){ %><tr class="small"><td class="nowrap"><%= fmt(n.created_at) %></td><td><%= n.kind %></td><td><%= n.channel %></td><td><%= n.subject %></td><td><%= n.status %></td></tr><% }) %></table></div></div><% } %>
+<%- include('partials/foot') %>

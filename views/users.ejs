@@ -1,0 +1,13 @@
+<%- include('partials/head') %>
+<div class="pagehead"><div><h1>Usuarios y accesos</h1><p class="sub">Sólo el presidente puede crear personal y otorgar acceso a gastos 🔒</p></div>
+  <div><% if (user.role === 'admin') { %><a class="btn" href="/users/new?role=staff">+ Personal Portilla Law</a><% } %> <a class="btn ghost" href="/users/new?role=employer">+ Patrono</a> <a class="btn ghost" href="/users/new?role=employee">+ Empleado</a></div></div>
+<div class="card tablewrap"><table>
+  <tr><th>Nombre</th><th>Rol</th><th>Compañía</th><th>Contacto</th><th>Gastos</th><th>Último acceso</th><th></th></tr>
+  <% users.forEach(function(u){ %>
+  <tr style="<%= u.active ? '' : 'opacity:.5' %>"><td><%= u.name %></td><td><span class="pill"><%= ROLE_LABELS[u.role] %></span></td><td><%= u.company_name || '—' %></td>
+    <td class="small"><%= u.email %><br><span class="muted"><%= u.phone || '' %></span></td>
+    <td><%= (u.role === 'admin' || u.can_view_expenses) ? '🔓 Sí' : '—' %></td><td class="small"><%= fmt(u.last_login_at) %></td>
+    <td class="nowrap small"><% if (user.role === 'admin' || !['admin','staff'].includes(u.role) || u.id === user.id) { %><a href="/users/<%= u.id %>/edit">editar</a><% } %><% if (u.role === 'employee') { %> · <a href="/employees/<%= u.id %>">ficha</a><% } %></td></tr>
+  <% }) %>
+</table></div>
+<%- include('partials/foot') %>

@@ -1,0 +1,11 @@
+<%- include('partials/head') %>
+<div class="pagehead"><div><h1>Reportes semanales</h1><p class="sub">Se envían automáticamente a cada patrono todos los lunes a las 8:00 AM (hora de PR)</p></div>
+  <form method="post" action="/reports/weekly-all/send" onsubmit="return confirm('¿Enviar ahora el reporte a todos los patronos?')"><button class="btn">Enviar todos ahora</button></form></div>
+<div class="card tablewrap"><table><tr><th>Compañía</th><th></th></tr>
+  <% companies.forEach(function(c){ %><tr><td><%= c.name %></td><td class="right"><a class="btn ghost sm" href="/reports/weekly/<%= c.id %>">Ver</a>
+    <form class="inline" method="post" action="/reports/weekly/<%= c.id %>/send"><button class="btn sm">Enviar al patrono</button></form></td></tr><% }) %>
+</table></div>
+<div class="card"><h2>Historial de envíos</h2><div class="tablewrap"><table><tr><th>Fecha</th><th>Compañía</th><th>Destinatario</th><th>Estado</th></tr>
+  <% sent.forEach(function(n){ %><tr class="small"><td><%= fmt(n.created_at) %></td><td><%= n.company_name %></td><td><%= n.user_name %> · <%= n.destination %></td><td><%= n.status %></td></tr><% }) %>
+  <% if (!sent.length) { %><tr><td colspan="4" class="muted">Aún no se han enviado reportes.</td></tr><% } %></table></div></div>
+<%- include('partials/foot') %>

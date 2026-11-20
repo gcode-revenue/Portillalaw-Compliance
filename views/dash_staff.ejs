@@ -1,0 +1,51 @@
+<%- include('partials/head') %>
+<div class="pagehead">
+  <div><h1>Panel de control</h1><p class="sub">Vista general del cumplimiento de todos los clientes</p></div>
+  <div class="noprint">
+    <a class="btn" href="/trainings/new">+ Entrenamiento</a>
+    <a class="btn ghost" href="/companies/new">+ Compañía</a>
+    <form class="inline" method="post" action="/settings/run-now"><button class="btn ghost" title="Ejecuta recordatorios y verificación de cumplimiento ahora">↻ Ejecutar automatizaciones</button></form>
+  </div>
+</div>
+<div class="grid g4">
+  <div class="stat"><b><%= stats.companies %></b><span>Compañías activas</span></div>
+  <div class="stat"><b><%= stats.employees %></b><span>Empleados en programa</span></div>
+  <div class="stat"><b><%= stats.avg %>%</b><span>Progreso promedio</span></div>
+  <div class="stat"><b style="color:<%= openAlerts ? '#b42318' : '#1b7f4b' %>"><%= openAlerts %></b><span>Alertas de cumplimiento abiertas</span></div>
+  <div class="stat"><b><%= stats.pendingReports %></b><span>Progress reports pendientes</span></div>
+  <div class="stat"><b><%= stats.unreviewed %></b><span>Reportes por verificar</span></div>
+</div>
+<div class="grid g2 mt">
+  <div class="card">
+    <h2>Compañías</h2>
+    <div class="tablewrap"><table>
+      <tr><th>Compañía</th><th>Empleados</th><th>Progreso</th><th>Cumplimiento</th></tr>
+      <% companies.forEach(function(c){ %>
+      <tr><td><a href="/companies/<%= c.id %>"><%= c.name %></a></td><td><%= c.prog.total %></td>
+        <td><%- include('partials/bar', { pct: c.prog.avg }) %></td>
+        <td><% if (c.prog.openAlerts) { %><span class="pill badc"><%= c.prog.openAlerts %> alerta(s)</span><% } else { %><span class="pill okc">OK</span><% } %> <span class="small muted"><%= c.prog.compliant %>/<%= c.prog.total %></span></td></tr>
+      <% }) %>
+      <% if (!companies.length) { %><tr><td colspan="4" class="muted">Aún no hay compañías. <a href="/companies/new">Crear la primera</a>.</td></tr><% } %>
+    </table></div>
+  </div>
+  <div class="card">
+    <h2>Alertas recientes <a class="small" href="/alerts">ver todas</a></h2>
+    <% alerts.forEach(function(a){ %>
+      <div class="alert-item"><b><%= a.emp_name %></b> <span class="muted small">· <%= a.company_name %> · <%= fmt(a.created_at) %></span><br><span class="small"><%= a.message %></span>
+      <div class="small"><a href="/employees/<%= a.employee_id %>">Ver empleado</a> · <a href="/messages/new?to=<%= a.employee_id %>">Escribirle</a></div></div>
+    <% }) %>
+    <% if (!alerts.length) { %><p class="muted">✅ Todos en cumplimiento.</p><% } %>
+  </div>
+</div>
+<div class="card">
+  <h2>Próximos entrenamientos</h2>
+  <div class="tablewrap"><table>
+    <tr><th>Fecha</th><th>Entrenamiento</th><th>Modalidad</th><th>Compañía</th><th>Confirmados</th></tr>
+    <% upcoming.forEach(function(t){ %>
+      <tr><td class="nowrap"><%= fmt(t.starts_at) %></td><td><a href="/trainings/<%= t.id %>"><%= t.title %></a></td><td><%= MODALITY_LABELS[t.modality] %></td>
+      <td><%= t.company_name || 'Varias' %></td><td><%= t.confirmed %>/<%= t.assigned %></td></tr>
+    <% }) %>
+    <% if (!upcoming.length) { %><tr><td colspan="5" class="muted">No hay entrenamientos programados.</td></tr><% } %>
+  </table></div>
+</div>
+<%- include('partials/foot') %>

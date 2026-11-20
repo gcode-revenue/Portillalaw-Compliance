@@ -1,0 +1,9 @@
+<%- include('partials/head') %>
+<div class="pagehead"><div><h1>Mensajes</h1><p class="sub">Comunicación entre Portilla Law, patronos y empleados</p></div><a class="btn" href="/messages/new">+ Nuevo mensaje</a></div>
+<div class="tabs"><a href="/messages" class="<%= box === 'inbox' ? 'active' : '' %>">Recibidos</a><a href="/messages?box=sent" class="<%= box === 'sent' ? 'active' : '' %>">Enviados</a></div>
+<div class="card tablewrap"><table>
+  <tr><th><%= box === 'sent' ? 'Para' : 'De' %></th><th>Asunto</th><th>Fecha</th></tr>
+  <% list.forEach(function(m){ %><tr class="<%= box === 'inbox' && !m.read_at ? 'unread' : '' %>"><td><%= m.other_name %></td><td><a href="/messages/<%= m.id %>"><%= m.subject || '(sin asunto)' %></a><div class="small muted"><%= (m.body || '').slice(0, 110) %></div></td><td class="nowrap small"><%= fmt(m.created_at) %></td></tr><% }) %>
+  <% if (!list.length) { %><tr><td colspan="3" class="muted">No hay mensajes.</td></tr><% } %>
+</table></div>
+<%- include('partials/foot') %>

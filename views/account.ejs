@@ -1,0 +1,13 @@
+<%- include('partials/head') %>
+<div class="pagehead"><div><h1>Mi cuenta</h1><p class="sub"><%= user.email %> · <%= ROLE_LABELS[user.role] %></p></div></div>
+<form method="post" action="/account" class="card" style="max-width:560px">
+  <h2>Notificaciones</h2>
+  <label>Teléfono celular (para SMS)</label><input name="phone" value="<%= user.phone || '' %>" placeholder="787-555-0000">
+  <label class="check"><input type="checkbox" name="notify_email" <%= user.notify_email ? 'checked' : '' %>> Recibir recordatorios por email</label>
+  <label class="check"><input type="checkbox" name="notify_sms" <%= user.notify_sms ? 'checked' : '' %>> Recibir recordatorios por SMS</label>
+  <h2 class="mt">Cambiar contraseña</h2>
+  <label>Contraseña actual</label><input type="password" name="current_password">
+  <label>Nueva contraseña (mín. 8 caracteres)</label><input type="password" name="new_password">
+  <button class="btn mt">Guardar</button>
+</form>
+<%- include('partials/foot') %>

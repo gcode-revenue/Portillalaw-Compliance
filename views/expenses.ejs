@@ -1,0 +1,36 @@
+<%- include('partials/head') %>
+<% const money = (n) => '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); %>
+<div class="pagehead"><div><h1>Gastos 🔒</h1><p class="sub">Acceso exclusivo del presidente y personal designado. Portilla Law cubre el 100% del costo de los adiestramientos.</p></div>
+  <a class="btn ghost" href="/expenses.csv">⬇ Exportar CSV</a></div>
+<div class="grid g3">
+  <div class="stat"><b><%= money(total) %></b><span>Total (filtro actual)</span></div>
+  <div class="card"><h3 style="margin-top:0">Por compañía</h3><% Object.entries(byCompany).sort((a,b)=>b[1]-a[1]).forEach(function([k,v]){ %><div class="small" style="display:flex;justify-content:space-between"><span><%= k %></span><b><%= money(v) %></b></div><% }) %></div>
+  <div class="card"><h3 style="margin-top:0">Por categoría</h3><% Object.entries(byCategory).sort((a,b)=>b[1]-a[1]).forEach(function([k,v]){ %><div class="small" style="display:flex;justify-content:space-between"><span><%= k %></span><b><%= money(v) %></b></div><% }) %></div>
+</div>
+<form method="post" action="/expenses" class="card">
+  <h2>Registrar gasto</h2>
+  <div class="row">
+    <div><label>Fecha *</label><input type="date" name="incurred_on" required value="<%= new Date().toISOString().slice(0,10) %>"></div>
+    <div><label>Categoría *</label><select name="category"><% Object.entries(CATEGORIES).forEach(function([k,v]){ %><option value="<%= k %>"><%= v %></option><% }) %></select></div>
+    <div><label>Monto (USD) *</label><input type="number" step="0.01" min="0.01" name="amount" required></div>
+    <div><label>Suplidor</label><input name="vendor"></div>
+    <div><label>Compañía cliente</label><select name="company_id"><option value="">General</option><% companies.forEach(function(c){ %><option value="<%= c.id %>"><%= c.name %></option><% }) %></select></div>
+    <div><label>Entrenamiento</label><select name="training_id"><option value="">—</option><% trainings.forEach(function(t){ %><option value="<%= t.id %>"><%= fmtDate(t.starts_at) %> · <%= t.title %></option><% }) %></select></div>
+  </div>
+  <label>Descripción</label><input name="description">
+  <button class="btn mt">Registrar</button>
+</form>
+<form method="get" class="card" style="display:flex;gap:.5rem;align-items:flex-end;flex-wrap:wrap">
+  <div><label>Compañía</label><select name="company"><option value="">Todas</option><% companies.forEach(function(c){ %><option value="<%= c.id %>" <%= f.company === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+  <div><label>Desde</label><input type="date" name="from" value="<%= f.from %>"></div>
+  <div><label>Hasta</label><input type="date" name="to" value="<%= f.to %>"></div>
+  <button class="btn ghost">Filtrar</button>
+</form>
+<div class="card tablewrap"><table>
+  <tr><th>Fecha</th><th>Categoría</th><th>Compañía / Entrenamiento</th><th>Suplidor / Descripción</th><th class="right">Monto</th><th></th></tr>
+  <% list.forEach(function(e){ %><tr><td class="nowrap"><%= e.incurred_on %></td><td><%= CATEGORIES[e.category] || e.category %></td><td class="small"><%= e.company_name || 'General' %><br><span class="muted"><%= e.training_title || '' %></span></td>
+    <td class="small"><%= e.vendor || '' %><br><span class="muted"><%= e.description || '' %></span></td><td class="right"><b><%= money(e.amount) %></b></td>
+    <td><form method="post" action="/expenses/<%= e.id %>/delete" onsubmit="return confirm('¿Eliminar este gasto?')"><button class="btn sm ghost">Eliminar</button></form></td></tr><% }) %>
+  <% if (!list.length) { %><tr><td colspan="6" class="muted">Sin gastos registrados.</td></tr><% } %>
+</table></div>
+<%- include('partials/foot') %>

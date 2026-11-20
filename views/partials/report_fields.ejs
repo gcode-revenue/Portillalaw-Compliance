@@ -1,0 +1,12 @@
+<label class="check"><input type="checkbox" name="attended_full" checked> Asistí al entrenamiento completo</label>
+<label>¿Qué aprendiste? Resume los temas principales *</label>
+<textarea name="summary" required minlength="20" placeholder="Ej.: Aprendimos los procedimientos de seguridad para..."></textarea>
+<label>¿Cómo lo aplicarás en tu trabajo?</label>
+<textarea name="applied_how"></textarea>
+<label>Preguntas o temas que necesitas reforzar</label>
+<textarea name="questions" style="min-height:60px"></textarea>
+<div class="row">
+  <div><label>Evaluación del entrenamiento (1-5)</label>
+    <select name="rating"><option value="">—</option><% for (let i=5;i>=1;i--){ %><option value="<%= i %>"><%= i %></option><% } %></select></div>
+  <div><label>Horas tomadas</label><input type="number" step="0.25" min="0" name="hours_reported"></div>
+</div>

@@ -1,0 +1,12 @@
+<%- include('partials/head') %>
+<div class="pagehead"><div><h1>Entrenamientos</h1><p class="sub">Video, presenciales y Zoom — Portilla Law cubre el 100% de los costos</p></div><% if (isStaff) { %><a class="btn" href="/trainings/new">+ Nuevo entrenamiento</a><% } %></div>
+<div class="tabs"><a href="/trainings" class="<%= scope === 'upcoming' ? 'active' : '' %>">Próximos</a><a href="/trainings?scope=past" class="<%= scope === 'past' ? 'active' : '' %>">Pasados</a></div>
+<div class="card tablewrap"><table>
+  <tr><th>Fecha</th><th>Entrenamiento</th><th>Modalidad</th><th>Compañía</th><th>Asignados</th><th>Confirmados</th><th>Completados</th><th>Ausentes</th></tr>
+  <% trainings.forEach(function(t){ %>
+  <tr style="<%= t.cancelled ? 'text-decoration:line-through;opacity:.6' : '' %>"><td class="nowrap"><%= fmt(t.starts_at) %></td><td><a href="/trainings/<%= t.id %>"><%= t.title %></a><% if (t.cancelled) { %> <span class="pill ausente">Cancelado</span><% } %></td>
+    <td><%= MODALITY_LABELS[t.modality] %></td><td><%= t.company_name || 'Varias' %></td><td><%= t.assigned %></td><td><%= t.confirmed %></td><td><%= t.completed %></td><td style="color:<%= t.absent ? '#b42318' : 'inherit' %>"><%= t.absent %></td></tr>
+  <% }) %>
+  <% if (!trainings.length) { %><tr><td colspan="8" class="muted">No hay entrenamientos.</td></tr><% } %>
+</table></div>
+<%- include('partials/foot') %>

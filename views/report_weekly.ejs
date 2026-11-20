@@ -1,0 +1,25 @@
+<%- include('partials/head') %>
+<div class="pagehead">
+  <div><h1>Reporte semanal de cumplimiento</h1><p class="sub"><b><%= d.company.name %></b> · <%= fmtDate(d.start.toISOString()) %> – <%= fmtDate(d.end.toISOString()) %></p></div>
+  <div class="noprint"><button class="btn ghost" onclick="window.print()">🖨 Imprimir / PDF</button>
+  <% if (isStaff) { %><form class="inline" method="post" action="/reports/weekly/<%= d.company.id %>/send"><button class="btn">Enviar al patrono</button></form><% } %></div>
+</div>
+<div class="grid g4">
+  <div class="card"><%- include('partials/gauge', { pct: d.prog.avg, label: 'Progreso promedio' }) %></div>
+  <div class="stat"><b><%= d.prog.compliant %>/<%= d.prog.total %></b><span>Empleados en cumplimiento</span></div>
+  <div class="stat"><b><%= d.employees.reduce((s,e)=>s+e.weekCompleted,0) %></b><span>Entrenamientos completados esta semana</span></div>
+  <div class="stat"><b style="color:<%= d.prog.openAlerts ? '#b42318' : '#1b7f4b' %>"><%= d.prog.openAlerts %></b><span>Alertas abiertas</span></div>
+</div>
+<div class="card tablewrap"><table>
+  <tr><th>Empleado</th><th>Progreso total</th><th>Horas</th><th>Esta semana</th><th>Próxima semana</th><th>Estado</th></tr>
+  <% d.employees.forEach(function(e){ %>
+  <tr><td><b><%= e.name %></b><div class="small muted"><%= e.job_title || '' %></div></td>
+    <td style="min-width:150px"><%- include('partials/bar', { pct: e.progress.pct }) %></td><td><%= e.progress.completedHours %>/<%= e.progress.target %></td>
+    <td class="small"><% e.week.forEach(function(w){ %><div><span class="pill <%= w.status %>"><%= STATUS_LABELS[w.status] %></span> <%= w.title %></div><% }) %><% if (!e.week.length) { %><span class="muted">—</span><% } %></td>
+    <td class="small"><% e.upcoming.forEach(function(w){ %><div><%= fmt(w.starts_at) %> · <%= w.title %></div><% }) %><% if (!e.upcoming.length) { %><span class="muted">—</span><% } %></td>
+    <td><%- e.progress.inCompliance ? '<span class="pill okc">En cumplimiento</span>' : '<span class="pill badc">Requiere atención</span>' %></td></tr>
+  <% }) %>
+</table></div>
+<% if (d.alerts.length) { %><div class="card"><h2>Alertas abiertas</h2><% d.alerts.forEach(function(a){ %><div class="alert-item small"><%= a.message %></div><% }) %></div><% } %>
+<p class="small muted">Generado por <%= orgName %> · <%= fmt(new Date().toISOString()) %></p>
+<%- include('partials/foot') %>

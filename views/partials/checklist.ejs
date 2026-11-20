@@ -1,0 +1,3 @@
+<ul class="checklist">
+<% items.forEach(function(c){ %><li class="<%= c.done ? 'done' : '' %>" title="<%= c.at ? fmt(c.at) : '' %>"><%= c.label %><% if (c.done && c.at) { %> <span class="muted">· <%= fmt(c.at) %></span><% } %></li><% }) %>
+</ul>

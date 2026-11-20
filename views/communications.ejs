@@ -1,0 +1,11 @@
+<%- include('partials/head') %>
+<div class="pagehead"><div><h1>Bitácora de comunicaciones</h1><p class="sub">Constancia de cada recordatorio, alerta y mensaje enviado · Email: <b><%= channels.email %></b> · SMS: <b><%= channels.sms %></b></p></div>
+  <form method="get"><select name="kind" onchange="this.form.submit()"><option value="">Todos los tipos</option><% kinds.forEach(function(k){ %><option <%= k === kind ? 'selected' : '' %>><%= k %></option><% }) %></select></form></div>
+<div class="card tablewrap"><table>
+  <tr><th>Fecha</th><th>Destinatario</th><th>Tipo</th><th>Canal</th><th>Asunto / contenido</th><th>Estado</th></tr>
+  <% list.forEach(function(n){ %><tr class="small"><td class="nowrap"><%= fmt(n.created_at) %></td><td><%= n.user_name %><br><span class="muted"><%= n.destination %></span></td><td><%= n.kind %></td><td><%= n.channel %></td>
+    <td><b><%= n.subject %></b><details><summary>contenido</summary><div class="msgbody"><%= n.body %></div></details></td>
+    <td><span class="pill <%= n.status === 'enviado' ? 'okc' : n.status === 'fallido' ? 'badc' : '' %>"><%= n.status %></span><% if (n.error) { %><div class="muted"><%= n.error %></div><% } %></td></tr><% }) %>
+  <% if (!list.length) { %><tr><td colspan="6" class="muted">Sin comunicaciones registradas.</td></tr><% } %>
+</table></div>
+<%- include('partials/foot') %>

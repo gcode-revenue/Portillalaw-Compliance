@@ -1,0 +1,25 @@
+{
+  "name": "portillalaw-compliance",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Plataforma interna de Portilla Law para gestión de cumplimiento del Programa de Aprendizaje Registrado (Apprenticeship) en Puerto Rico.",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "scripts": {
+    "start": "node --no-warnings src/server.js",
+    "dev": "node --no-warnings --watch src/server.js",
+    "seed": "node --no-warnings scripts/seed.js",
+    "test": "node --no-warnings --test test/*.test.js"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "ejs": "^7.0.2",
+    "express": "^5.3.0",
+    "express-session": "^1.19.0",
+    "node-cron": "^4.6.0",
+    "nodemailer": "^10.6.0"
+  }
+}

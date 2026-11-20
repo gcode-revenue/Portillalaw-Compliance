@@ -1,0 +1,28 @@
+<%- include('partials/head') %>
+<div class="card" style="max-width:640px;margin:2rem auto">
+  <div class="muted small">⚖️ <%= orgName %> · Cumplimiento</div>
+  <h1><%= a.title %></h1>
+  <p class="sub"><%= a.emp_name %> · <%= fmt(a.starts_at) %> · <%= MODALITY_LABELS[a.modality] %></p>
+  <% if (result) { %>
+    <div class="flash ok mt"><%= result %></div>
+    <% if (action === 'checkin' && a.meeting_url && a.modality !== 'presencial') { %><a class="btn" href="<%= a.meeting_url %>">Ir al <%= a.modality === 'zoom' ? 'Zoom' : 'video' %></a><% } %>
+  <% } else { %>
+    <% if (error) { %><div class="flash error mt"><%= error %></div><% } %>
+    <% if (action === 'confirm') { %>
+      <% if (a.confirmed_at) { %><div class="flash ok mt">Ya confirmaste tu asistencia el <%= fmt(a.confirmed_at) %>.</div>
+      <% } else { %>
+      <p>Confirma que asistirás a este entrenamiento.</p>
+      <form method="post"><button class="btn ok">✔ Confirmo mi asistencia</button></form>
+      <% } %>
+    <% } else if (action === 'checkin') { %>
+      <% if (a.checked_in_at) { %><div class="flash ok mt">Check-in registrado el <%= fmt(a.checked_in_at) %>.</div>
+      <% } else { %>
+      <p>Registra tu llegada / conexión al entrenamiento.</p>
+      <form method="post"><button class="btn ok">📍 Hacer check-in ahora</button></form>
+      <% } %>
+    <% } else if (action === 'report') { %>
+      <form method="post"><%- include('partials/report_fields') %><button class="btn ok mt">Someter progress report</button></form>
+    <% } %>
+  <% } %>
+</div>
+<%- include('partials/foot') %>

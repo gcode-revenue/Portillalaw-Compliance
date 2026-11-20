@@ -1,0 +1,20 @@
+<%- include('partials/head') %>
+<h1><%= title %></h1>
+<form method="post" action="<%= t.id ? '/trainings/' + t.id : '/trainings' %>" class="card" style="max-width:820px">
+  <label>Título *</label><input name="title" value="<%= t.title || '' %>" required>
+  <label>Descripción / objetivos</label><textarea name="description"><%= t.description || '' %></textarea>
+  <div class="row">
+    <div><label>Modalidad *</label><select name="modality"><% Object.entries(MODALITY_LABELS).forEach(function([k,v]){ %><option value="<%= k %>" <%= t.modality === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
+    <div><label>Fecha y hora (hora de PR) *</label><input type="datetime-local" name="starts_at" value="<%= isoToLocalInput(t.starts_at) %>" required></div>
+    <div><label>Duración (minutos)</label><input type="number" min="5" name="duration_min" value="<%= t.duration_min %>"></div>
+    <div><label>Horas de crédito</label><input type="number" step="0.25" min="0" name="hours_credit" value="<%= t.hours_credit %>"></div>
+    <div><label>Lugar (presencial)</label><input name="location" value="<%= t.location || '' %>"></div>
+    <div><label>Enlace Zoom / video</label><input name="meeting_url" type="url" value="<%= t.meeting_url || '' %>"></div>
+    <div><label>Instructor</label><input name="instructor" value="<%= t.instructor || '' %>"></div>
+    <div><label>Compañía (vacío = abierto a varias)</label><select name="company_id"><option value="">— Varias compañías —</option>
+      <% companies.forEach(function(c){ %><option value="<%= c.id %>" <%= Number(t.company_id) === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+  </div>
+  <p class="small muted">Los empleados asignados recibirán recordatorios automáticos por email y SMS según la configuración (por defecto 24 h, 12 h, 1 h, 30 min y 5 min antes).</p>
+  <button class="btn mt">Guardar</button>
+</form>
+<%- include('partials/foot') %>

@@ -1,0 +1,31 @@
+<%- include('partials/head') %>
+<h1><%= title %></h1>
+<form method="post" action="<%= u.id ? '/users/' + u.id : '/users' %>" class="card" style="max-width:760px">
+  <div class="row">
+    <div><label>Nombre completo *</label><input name="name" value="<%= u.name || '' %>" required></div>
+    <div><label>Email *</label><input type="email" name="email" value="<%= u.email || '' %>" required></div>
+    <div><label>Celular (SMS)</label><input name="phone" value="<%= u.phone || '' %>" placeholder="787-555-0000"></div>
+    <% if (user.role === 'employer') { %>
+      <input type="hidden" name="role" value="employee">
+    <% } else { %>
+    <div><label>Rol</label><select name="role" id="role" <%= u.id && user.role !== 'admin' ? 'disabled' : '' %>>
+      <% const roles = user.role === 'admin' ? ['admin','staff','employer','employee'] : ['employer','employee']; roles.forEach(function(r){ %>
+      <option value="<%= r %>" <%= u.role === r ? 'selected' : '' %>><%= ROLE_LABELS[r] %></option><% }) %></select></div>
+    <div><label>Compañía (patrono / empleado)</label><select name="company_id"><option value="">—</option>
+      <% companies.forEach(function(c){ %><option value="<%= c.id %>" <%= Number(u.company_id) === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
+    <% } %>
+    <div><label>Puesto / ocupación</label><input name="job_title" value="<%= u.job_title || '' %>"></div>
+    <div><label>Meta de horas de instrucción (empleados)</label><input type="number" step="0.5" min="0" name="required_hours" value="<%= u.required_hours || 0 %>"></div>
+    <div><label><%= u.id ? 'Nueva contraseña (opcional)' : 'Contraseña (vacío = generar temporal)' %></label><input type="password" name="password" autocomplete="new-password"></div>
+  </div>
+  <% if (user.role === 'admin') { %>
+    <div class="card mt" style="background:#fffaf0;border-color:#f0dfb0"><label class="check"><input type="checkbox" name="can_view_expenses" <%= u.can_view_expenses ? 'checked' : '' %>> 🔒 Designar acceso a <b>&nbsp;Gastos&nbsp;</b> (sólo aplica a Personal Portilla Law)</label></div>
+  <% } %>
+  <% if (u.id) { %>
+    <label class="check"><input type="checkbox" name="notify_email" <%= u.notify_email ? 'checked' : '' %>> Notificaciones por email</label>
+    <label class="check"><input type="checkbox" name="notify_sms" <%= u.notify_sms ? 'checked' : '' %>> Notificaciones por SMS</label>
+    <label class="check"><input type="checkbox" name="active" <%= u.active ? 'checked' : '' %>> Usuario activo</label>
+  <% } %>
+  <button class="btn mt">Guardar</button>
+</form>
+<%- include('partials/foot') %>

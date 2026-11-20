@@ -1,0 +1,17 @@
+<div class="trainingcard">
+  <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap">
+    <div><b><%= a.title %></b> <span class="pill <%= a.status %>"><%= STATUS_LABELS[a.status] %></span>
+      <div class="small muted"><%= fmt(a.starts_at) %> · <%= MODALITY_LABELS[a.modality] %> · <%= a.duration_min %> min · <%= a.hours_credit %> h crédito</div>
+      <div class="small"><% if (a.modality === 'presencial') { %>📍 <%= a.location || 'Lugar por confirmar' %><% } else if (a.meeting_url) { %>🔗 <a href="<%= a.meeting_url %>" target="_blank" rel="noopener"><%= a.modality === 'zoom' ? 'Enlace de Zoom' : 'Ver video' %></a><% } %></div>
+    </div>
+    <div style="min-width:220px"><%- include('checklist', { items: a.checklist }) %></div>
+  </div>
+  <div class="actions">
+    <% if (a.status === 'asignado') { %><form class="inline" method="post" action="/assignments/<%= a.id %>/confirm"><button class="btn ok sm">✔ Confirmar asistencia</button></form><% } %>
+    <% if (['asignado','confirmado'].includes(a.status)) { %>
+      <form class="inline" method="post" action="/assignments/<%= a.id %>/checkin"><button class="btn sm" <%= a.window.isOpen ? '' : 'disabled' %> title="Disponible <%= fmt(new Date(a.window.open).toISOString()) %>">📍 Check-in</button></form>
+      <% if (!a.window.isOpen) { %><span class="small muted">Check-in disponible desde <%= fmt(new Date(a.window.open).toISOString()) %></span><% } %>
+    <% } %>
+    <% if (['en_curso','pendiente_reporte'].includes(a.status) && !a.report_id) { %><a class="btn ok sm" href="/assignments/<%= a.id %>/report">📝 Completar progress report</a><% } %>
+  </div>
+</div>

@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title><%= title ? title + ' · ' : '' %><%= orgName %> Cumplimiento</title>
+<link rel="stylesheet" href="/public/styles.css">
+</head>
+<body>
+<% if (user) { %>
+<header class="topbar">
+  <a class="brand" href="/">⚖️ <%= orgName %> <span>Cumplimiento</span></a>
+  <nav class="nav">
+    <a href="/" class="<%= path === '/' ? 'active' : '' %>">Panel</a>
+    <% if (isStaff) { %>
+      <a href="/companies" class="<%= path.startsWith('/companies') ? 'active' : '' %>">Compañías</a>
+    <% } %>
+    <a href="/trainings" class="<%= path.startsWith('/trainings') ? 'active' : '' %>">Entrenamientos</a>
+    <% if (user.role !== 'employee') { %>
+      <a href="/alerts" class="<%= path.startsWith('/alerts') ? 'active' : '' %>">Alertas<% if (openAlerts) { %><span class="badge"><%= openAlerts %></span><% } %></a>
+      <a href="/reports" class="<%= path.startsWith('/reports') ? 'active' : '' %>">Reportes</a>
+    <% } %>
+    <a href="/messages" class="<%= path.startsWith('/messages') ? 'active' : '' %>">Mensajes<% if (unread) { %><span class="badge"><%= unread %></span><% } %></a>
+    <% if (isStaff) { %>
+      <a href="/communications" class="<%= path.startsWith('/communications') ? 'active' : '' %>">Comunicaciones</a>
+      <a href="/users" class="<%= path.startsWith('/users') ? 'active' : '' %>">Usuarios</a>
+    <% } %>
+    <% if (canSeeExpenses) { %><a href="/expenses" class="<%= path.startsWith('/expenses') ? 'active' : '' %>">Gastos 🔒</a><% } %>
+    <% if (user.role === 'admin') { %><a href="/settings" class="<%= path.startsWith('/settings') ? 'active' : '' %>">Configuración</a><% } %>
+  </nav>
+  <div class="userbox">
+    <a href="/account" style="color:#fff"><%= user.name %></a> · <%= ROLE_LABELS[user.role] %>
+    <form method="post" action="/logout"><button class="btn sm ghost">Salir</button></form>
+  </div>
+</header>
+<% } %>
+<main class="wrap">
+<% if (flash) { %><div class="flash <%= flash.type %>"><%= flash.text %></div><% } %>

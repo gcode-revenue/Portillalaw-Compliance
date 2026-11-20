@@ -1,0 +1,17 @@
+<%- include('partials/head') %>
+<h1><%= title %></h1>
+<form method="post" action="<%= c.id ? '/companies/' + c.id : '/companies' %>" class="card" style="max-width:760px">
+  <div class="row">
+    <div><label>Nombre de la compañía *</label><input name="name" value="<%= c.name || '' %>" required></div>
+    <div><label>Programa</label><input name="program_name" value="<%= c.program_name || 'Programa de Aprendizaje Registrado' %>"></div>
+    <div><label>Persona contacto</label><input name="contact_name" value="<%= c.contact_name || '' %>"></div>
+    <div><label>Email contacto</label><input name="contact_email" type="email" value="<%= c.contact_email || '' %>"></div>
+    <div><label>Teléfono contacto</label><input name="contact_phone" value="<%= c.contact_phone || '' %>"></div>
+    <div><label>Etapa del proceso</label><select name="proposal_status"><% Object.entries(PROPOSAL_STATUS).forEach(function([k,v]){ %><option value="<%= k %>" <%= c.proposal_status === k ? 'selected' : '' %>><%= v %></option><% }) %></select></div>
+  </div>
+  <label>Dirección</label><input name="address" value="<%= c.address || '' %>">
+  <label>Notas de la propuesta / Conexión Laboral</label><textarea name="proposal_notes"><%= c.proposal_notes || '' %></textarea>
+  <% if (c.id) { %><label class="check"><input type="checkbox" name="active" <%= c.active ? 'checked' : '' %>> Compañía activa</label><% } else { %><input type="hidden" name="active" value="1"><% } %>
+  <button class="btn mt">Guardar</button> <a class="btn ghost mt" href="<%= c.id ? '/companies/' + c.id : '/companies' %>">Cancelar</a>
+</form>
+<%- include('partials/foot') %>

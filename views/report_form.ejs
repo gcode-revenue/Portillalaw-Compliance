@@ -1,0 +1,11 @@
+<%- include('partials/head') %>
+<div class="card" style="max-width:640px;margin:auto">
+  <h1>Progress report</h1>
+  <p class="sub"><b><%= a.title %></b> · <%= fmt(a.starts_at) %></p>
+  <% if (error) { %><div class="flash error mt"><%= error %></div><% } %>
+  <form method="post" action="<%= action %>">
+    <%- include('partials/report_fields') %>
+    <button class="btn ok mt">Someter progress report</button>
+  </form>
+</div>
+<%- include('partials/foot') %>

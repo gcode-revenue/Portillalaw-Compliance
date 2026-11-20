@@ -1,0 +1,20 @@
+<%- include('partials/head') %>
+<div class="pagehead"><div><h1>Configuración de automatizaciones</h1><p class="sub">Email: <b><%= channels.email %></b> · SMS: <b><%= channels.sms %></b> · <a href="/audit">Registro de auditoría</a></p></div></div>
+<form method="post" action="/settings" class="card" style="max-width:760px">
+  <% Object.entries(EDITABLE).forEach(function([k, label]){ %>
+    <label><%= label %></label><input name="<%= k %>" value="<%= values[k] %>"><div class="small muted">Valor por defecto: <%= DEFAULT_SETTINGS[k] %></div>
+  <% }) %>
+  <button class="btn mt">Guardar</button>
+</form>
+<div class="card" style="max-width:760px"><h2>Cómo funciona el motor de cumplimiento</h2>
+<ol class="small">
+  <li>Al asignar un entrenamiento, el empleado recibe email + SMS con enlace de <b>confirmación de un clic</b> (o puede responder "SI" al SMS).</li>
+  <li>Recordatorios automáticos antes del entrenamiento en los intervalos configurados. Si no ha confirmado, el recordatorio lo pide.</li>
+  <li>Si no confirma a tiempo se abre una alerta para Portilla Law y luego se avisa al patrono.</li>
+  <li>El empleado hace <b>check-in</b> (plataforma o enlace) desde unos minutos antes del inicio. El staff también puede verificar la asistencia manualmente.</li>
+  <li>Al terminar, sin check-in ⇒ <b>AUSENTE</b>: alerta y aviso inmediato a Portilla Law, patrono y empleado.</li>
+  <li>Con check-in ⇒ se solicita el <b>progress report</b>, con seguimientos; si vence, alerta a Portilla Law y patrono.</li>
+  <li>Cada lunes se envía el reporte semanal a cada patrono.</li>
+</ol>
+<form method="post" action="/settings/run-now"><button class="btn ghost">↻ Ejecutar el motor ahora</button></form></div>
+<%- include('partials/foot') %>

@@ -1,0 +1,12 @@
+<%- include('partials/head') %>
+<div class="pagehead"><div><h1>Compañías clientes</h1><p class="sub">Patronos participantes del Programa de Aprendizaje Registrado</p></div><a class="btn" href="/companies/new">+ Nueva compañía</a></div>
+<div class="card tablewrap"><table>
+  <tr><th>Compañía</th><th>Contacto</th><th>Etapa</th><th>Empleados</th><th>Progreso</th><th>Alertas</th></tr>
+  <% companies.forEach(function(c){ %>
+  <tr style="<%= c.active ? '' : 'opacity:.55' %>"><td><a href="/companies/<%= c.id %>"><%= c.name %></a></td><td class="small"><%= c.contact_name || '' %><br><span class="muted"><%= c.contact_email || '' %></span></td>
+    <td><span class="pill"><%= PROPOSAL_STATUS[c.proposal_status] || c.proposal_status %></span></td><td><%= c.prog.total %></td>
+    <td style="min-width:150px"><%- include('partials/bar', { pct: c.prog.avg }) %></td>
+    <td><%- c.prog.openAlerts ? '<span class="pill badc">' + c.prog.openAlerts + '</span>' : '<span class="pill okc">0</span>' %></td></tr>
+  <% }) %>
+</table></div>
+<%- include('partials/foot') %>
