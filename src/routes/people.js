@@ -90,7 +90,9 @@ router.get('/employees/:id', requireLogin, (req, res) => {
   if (!emp) return res.status(404).render('error', { title: 'No encontrado', message: 'Empleado no encontrado.' });
   if (!canViewEmployee(req.user, emp)) return forbidden(res);
   const progress = employeeProgress(emp.id);
-  const assignments = db.prepare(`SELECT a.*, t.title, t.modality, t.starts_at, t.duration_min, t.hours_credit,
+  const assignments = db.prepare(`SELECT a.*, t.title, t.modality, t.starts_at, t.due_at, t.duration_min, t.hours_credit,
+      (SELECT pct FROM video_progress vp WHERE vp.assignment_id = a.id) video_pct,
+      (SELECT presence_checks FROM video_progress vp WHERE vp.assignment_id = a.id) presence_checks,
       p.id report_id, p.summary, p.applied_how, p.questions, p.rating, p.submitted_at report_at, p.reviewed_at, p.review_notes
     FROM assignments a JOIN trainings t ON t.id = a.training_id LEFT JOIN progress_reports p ON p.assignment_id = a.id
     WHERE a.employee_id = ? AND t.cancelled = 0 ORDER BY t.starts_at DESC`).all(emp.id)

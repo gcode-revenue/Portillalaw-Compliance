@@ -3,6 +3,7 @@ const express = require('express');
 const { db, getSetting, setSetting, audit, DEFAULT_SETTINGS } = require('../db');
 const { requireRole, requireStaff } = require('../auth');
 const { channelsStatus, notifyUser } = require('../services/notify');
+const zoom = require('../services/zoom');
 const compliance = require('../services/compliance');
 
 const router = express.Router();
@@ -31,11 +32,15 @@ const EDITABLE = {
   unconfirmed_employer_min: 'Aviso al patrono si no confirmó (minutos antes)',
   weekly_report_cron: 'Horario del reporte semanal (cron, hora PR; requiere reinicio)',
   org_name: 'Nombre de la organización',
+  video_min_pct: 'Videos: % mínimo que debe verse para completarlo',
+  video_presence_check_min: 'Videos: preguntar "¿Sigues ahí?" cada X minutos (0 = nunca)',
+  zoom_min_attendance_pct: 'Zoom: % de la sesión conectado para contar asistencia',
+  zoom_report_wait_min: 'Zoom: minutos de espera por el reporte antes de marcar ausente',
 };
 
 router.get('/settings', requireRole('admin'), (req, res) => {
   const values = Object.fromEntries(Object.keys(EDITABLE).map((k) => [k, getSetting(k)]));
-  res.render('settings', { title: 'Configuración de automatizaciones', values, EDITABLE, DEFAULT_SETTINGS, channels: channelsStatus() });
+  res.render('settings', { title: 'Configuración de automatizaciones', values, EDITABLE, DEFAULT_SETTINGS, channels: { ...channelsStatus(), zoom: zoom.configured() ? 'Zoom conectado' : 'No conectado' } });
 });
 
 router.post('/settings', requireRole('admin'), (req, res) => {

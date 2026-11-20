@@ -6,6 +6,9 @@ const { localInputToIso } = require('../util/time');
 const compliance = require('../services/compliance');
 const { checklist } = require('../services/progress');
 const { notifyUser } = require('../services/notify');
+const video = require('../services/video');
+const zoom = require('../services/zoom');
+const { getSetting } = require('../db');
 
 const router = express.Router();
 
@@ -42,14 +45,16 @@ router.get('/trainings/new', requireStaff, (req, res) => {
 
 function trainingFields(b) {
   return [b.title, b.description || null, b.modality, localInputToIso(b.starts_at), Number(b.duration_min) || 60,
-    Number(b.hours_credit) || 0, b.location || null, b.meeting_url || null, b.instructor || null, b.company_id ? Number(b.company_id) : null];
+    Number(b.hours_credit) || 0, b.location || null, b.meeting_url || null, b.instructor || null, b.company_id ? Number(b.company_id) : null,
+    b.modality === 'video' ? localInputToIso(b.due_at) : null, b.modality === 'zoom' && b.zoom_meeting_id ? String(b.zoom_meeting_id).replace(/\D/g, '') : null];
 }
 
 router.post('/trainings', requireStaff, (req, res) => {
   const b = req.body;
   if (!b.title || !b.starts_at || !['video', 'presencial', 'zoom'].includes(b.modality)) { req.flash('error', 'Título, modalidad y fecha son requeridos.'); return res.redirect('/trainings/new'); }
-  const r = db.prepare(`INSERT INTO trainings (title, description, modality, starts_at, duration_min, hours_credit, location, meeting_url, instructor, company_id, created_by)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(...trainingFields(b), req.user.id);
+  if (b.modality === 'video' && (!b.meeting_url || !b.due_at)) { req.flash('error', 'Para un video indique el enlace del video y la fecha límite.'); return res.redirect('/trainings/new'); }
+  const r = db.prepare(`INSERT INTO trainings (title, description, modality, starts_at, duration_min, hours_credit, location, meeting_url, instructor, company_id, due_at, zoom_meeting_id, created_by)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(...trainingFields(b), req.user.id);
   audit(req.user.id, 'crear_entrenamiento', 'training', r.lastInsertRowid, { title: b.title });
   req.flash('ok', 'Entrenamiento creado. Ahora asigna a los empleados.');
   res.redirect(`/trainings/${r.lastInsertRowid}`);
@@ -59,21 +64,24 @@ router.get('/trainings/:id', requireLogin, (req, res) => {
   const t = db.prepare('SELECT t.*, c.name company_name FROM trainings t LEFT JOIN companies c ON c.id = t.company_id WHERE t.id = ?').get(req.params.id);
   if (!t) return res.status(404).render('error', { title: 'No encontrado', message: 'Entrenamiento no encontrado.' });
   if (!canSeeTraining(req.user, t)) return forbidden(res);
-  let rosterSql = `SELECT a.*, u.name emp_name, u.email, u.phone, c.name company_name, p.id report_id, p.submitted_at report_at
-    FROM assignments a JOIN users u ON u.id = a.employee_id LEFT JOIN companies c ON c.id = u.company_id
+  let rosterSql = `SELECT a.*, u.name emp_name, u.email, u.phone, c.name company_name, p.id report_id, p.submitted_at report_at,
+      vp.pct video_pct, vp.presence_checks, vp.updated_at video_seen_at
+    FROM assignments a LEFT JOIN video_progress vp ON vp.assignment_id = a.id JOIN users u ON u.id = a.employee_id LEFT JOIN companies c ON c.id = u.company_id
     LEFT JOIN progress_reports p ON p.assignment_id = a.id WHERE a.training_id = ?`;
   const params = [t.id];
   if (req.user.role === 'employer') { rosterSql += ' AND u.company_id = ?'; params.push(req.user.company_id); }
   if (req.user.role === 'employee') { rosterSql += ' AND u.id = ?'; params.push(req.user.id); }
   const roster = db.prepare(rosterSql + ' ORDER BY u.name').all(...params)
-    .map((a) => ({ ...a, checklist: checklist(a, a.report_id ? { submitted_at: a.report_at } : null) }));
+    .map((a) => ({ ...a, checklist: checklist({ ...a, modality: t.modality }, a.report_id ? { submitted_at: a.report_at } : null) }));
   let candidates = [];
   if (isStaff(req.user)) {
     candidates = db.prepare(`SELECT u.id, u.name, c.name company_name FROM users u LEFT JOIN companies c ON c.id = u.company_id
       WHERE u.role = 'employee' AND u.active = 1 AND u.id NOT IN (SELECT employee_id FROM assignments WHERE training_id = ?)
       ${t.company_id ? 'AND u.company_id = ?' : ''} ORDER BY c.name, u.name`).all(...(t.company_id ? [t.id, t.company_id] : [t.id]));
   }
-  res.render('training', { title: t.title, t, roster, candidates, window: compliance.checkInWindow(t) });
+  const zoomInfo = t.modality === 'zoom' ? { configured: zoom.configured(), meetingId: zoom.meetingIdFrom(t),
+    sync: db.prepare('SELECT * FROM zoom_sync WHERE training_id = ?').get(t.id) } : null;
+  res.render('training', { title: t.title, t, roster, candidates, window: compliance.checkInWindow(t), zoomInfo, videoMinPct: getSetting('video_min_pct') });
 });
 
 router.get('/trainings/:id/edit', requireStaff, (req, res) => {
@@ -87,10 +95,10 @@ router.post('/trainings/:id', requireStaff, async (req, res) => {
   const old = db.prepare('SELECT * FROM trainings WHERE id = ?').get(req.params.id);
   if (!old) return res.redirect('/trainings');
   const f = trainingFields(req.body);
-  db.prepare(`UPDATE trainings SET title=?, description=?, modality=?, starts_at=?, duration_min=?, hours_credit=?, location=?, meeting_url=?, instructor=?, company_id=? WHERE id=?`)
+  db.prepare(`UPDATE trainings SET title=?, description=?, modality=?, starts_at=?, duration_min=?, hours_credit=?, location=?, meeting_url=?, instructor=?, company_id=?, due_at=?, zoom_meeting_id=? WHERE id=?`)
     .run(...f, old.id);
   audit(req.user.id, 'editar_entrenamiento', 'training', old.id);
-  if (f[3] !== old.starts_at) {
+  if (f[3] !== old.starts_at || f[10] !== old.due_at) {
     // Cambió la fecha: reiniciar recordatorios y avisar a los participantes
     db.prepare("DELETE FROM notifications WHERE kind = 'recordatorio' AND assignment_id IN (SELECT id FROM assignments WHERE training_id = ?)").run(old.id);
     const people = db.prepare("SELECT u.*, a.id aid FROM assignments a JOIN users u ON u.id = a.employee_id WHERE a.training_id = ? AND a.status IN ('asignado','confirmado')").all(old.id);
@@ -128,6 +136,40 @@ router.post('/trainings/:id/assign', requireStaff, async (req, res) => {
   for (const aid of created) await compliance.notifyAssigned(aid);
   req.flash('ok', `${created.length} empleado(s) asignado(s) y notificado(s).`);
   res.redirect(`/trainings/${req.params.id}`);
+});
+
+router.post('/trainings/:id/zoom-sync', requireStaff, async (req, res) => {
+  const t = db.prepare('SELECT * FROM trainings WHERE id = ?').get(req.params.id);
+  if (!t) return res.redirect('/trainings');
+  if (!zoom.configured()) { req.flash('error', 'Zoom no está conectado (faltan ZOOM_ACCOUNT_ID, ZOOM_CLIENT_ID y ZOOM_CLIENT_SECRET).'); return res.redirect(`/trainings/${t.id}`); }
+  const n = await zoom.syncTraining(t);
+  const sync = db.prepare('SELECT * FROM zoom_sync WHERE training_id = ?').get(t.id);
+  audit(req.user.id, 'sincronizar_zoom', 'training', t.id, { present: n });
+  req.flash(n === null ? 'error' : 'ok', n === null ? `No se pudo obtener el reporte de Zoom: ${sync?.error || 'sin ID de reunión'}` : `Reporte de Zoom importado: ${n} empleado(s) con asistencia verificada.`);
+  res.redirect(`/trainings/${t.id}`);
+});
+
+// --- Video: reproductor con seguimiento ---
+function loadVideoAssignment(id, userId) {
+  return db.prepare(`SELECT a.*, t.title, t.description, t.modality, t.starts_at, t.due_at, t.duration_min, t.meeting_url, t.hours_credit, t.cancelled
+    FROM assignments a JOIN trainings t ON t.id = a.training_id WHERE a.id = ? AND a.employee_id = ?`).get(id, userId);
+}
+router.get('/assignments/:id/watch', requireLogin, (req, res) => {
+  const a = loadVideoAssignment(req.params.id, req.user.id);
+  if (!a || a.modality !== 'video' || a.cancelled) return forbidden(res, 'Este video no está asignado a su cuenta.');
+  const w = video.videoWindow(a);
+  const now = Date.now();
+  const progress = video.getProgress(a.id);
+  const hasReport = !!db.prepare('SELECT 1 FROM progress_reports WHERE assignment_id = ?').get(a.id);
+  res.render('watch', {
+    title: a.title, a, progress, hasReport, src: video.parseVideoUrl(a.meeting_url),
+    notYet: now < w.open, closed: now > w.close && !['pendiente_reporte', 'completado'].includes(a.status) || ['ausente', 'excusado'].includes(a.status),
+    due: new Date(w.close).toISOString(), minPct: Number(getSetting('video_min_pct')), presenceMin: Number(getSetting('video_presence_check_min')),
+  });
+});
+router.post('/assignments/:id/watch/progress', requireLogin, (req, res) => {
+  const r = video.recordProgress(Number(req.params.id), req.user.id, req.body || {});
+  res.status(r.ok ? 200 : 400).json(r.ok ? { ok: true, pct: r.pct, minPct: r.minPct, completed: r.completed, intervals: r.intervals } : r);
 });
 
 // --- Acciones sobre una asignación ---
@@ -181,7 +223,7 @@ router.post('/assignments/:id/status', requireLogin, (req, res) => {
   const note = req.body.note ? `[${res.locals.fmt(now)} ${u.name}] ${req.body.note}` : null;
   switch (action) {
     case 'presente': // asistencia verificada manualmente (lista de asistencia presencial, registro de Zoom)
-      db.prepare(`UPDATE assignments SET checked_in_at = COALESCE(checked_in_at, ?), confirmed_at = COALESCE(confirmed_at, ?),
+      db.prepare(`UPDATE assignments SET checked_in_at = COALESCE(checked_in_at, ?), confirmed_at = COALESCE(confirmed_at, ?), attendance_source = COALESCE(attendance_source, 'staff'),
         status = CASE WHEN EXISTS (SELECT 1 FROM progress_reports WHERE assignment_id = assignments.id) THEN 'completado'
                       WHEN datetime(?) > datetime(?, '+' || ? || ' minutes') THEN 'pendiente_reporte' ELSE 'en_curso' END WHERE id = ?`)
         .run(now, now, now, a.starts_at, a.duration_min, a.id);
@@ -207,6 +249,8 @@ router.post('/assignments/:id/status', requireLogin, (req, res) => {
     case 'reabrir':
       db.prepare("UPDATE assignments SET status = 'asignado', checked_in_at = NULL, checked_out_at = NULL, completed_at = NULL WHERE id = ?").run(a.id);
       db.prepare('DELETE FROM notifications WHERE assignment_id = ? AND kind = ?').run(a.id, 'recordatorio');
+      db.prepare('DELETE FROM video_progress WHERE assignment_id = ?').run(a.id);
+      db.prepare("UPDATE assignments SET attendance_source = NULL, attended_minutes = NULL WHERE id = ?").run(a.id);
       break;
     case 'quitar':
       db.prepare('DELETE FROM assignments WHERE id = ?').run(a.id);

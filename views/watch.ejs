@@ -1,0 +1,55 @@
+<%- include('partials/head') %>
+<style>
+  .player-box{position:relative;background:#000;border-radius:10px;overflow:hidden;aspect-ratio:16/9}
+  .player-box iframe,.player-box video,#player>div{position:absolute;inset:0;width:100%!important;height:100%!important;border:0}
+  .overlay{position:absolute;inset:0;background:rgba(11,61,99,.92);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:1rem;z-index:5}
+  .overlay[hidden]{display:none}
+  .watchgrid{display:grid;gap:1rem;grid-template-columns:1fr;align-items:start}@media(min-width:900px){.watchgrid{grid-template-columns:minmax(0,2.2fr) minmax(260px,1fr)}}
+</style>
+<div class="pagehead"><div><h1><%= a.title %></h1>
+  <p class="sub">Video de adiestramiento · <%= a.hours_credit %> h de crédito · Fecha límite: <b><%= fmt(due) %></b></p></div>
+  <a class="btn ghost" href="/">← Mis entrenamientos</a></div>
+<% if (notYet) { %>
+  <div class="card"><p>Este video estará disponible a partir del <b><%= fmt(a.starts_at) %></b>.</p></div>
+<% } else if (closed) { %>
+  <div class="card"><p>La fecha límite para este video ya pasó o el entrenamiento está cerrado. Comunícate con Portilla Law.</p><a class="btn" href="/messages/new">Escribir a Portilla Law</a></div>
+<% } else if (!src || src.provider === 'external') { %>
+  <div class="card"><p>Este video está en una plataforma externa que no permite seguimiento automático.</p>
+    <a class="btn" href="<%= a.meeting_url %>" target="_blank" rel="noopener">Abrir el video</a>
+    <p class="small muted mt">Portilla Law verificará tu asistencia manualmente.</p></div>
+<% } else { %>
+  <div class="watchgrid">
+    <div>
+      <div class="player-box"><div id="player"></div>
+        <div class="overlay" id="vp-presence" hidden>
+          <h2 style="color:#fff">¿Sigues ahí?</h2>
+          <p>Confirma que estás viendo el adiestramiento para continuar.</p>
+          <button class="btn ok" id="vp-presence-btn">Sí, continúo viendo</button>
+        </div>
+      </div>
+      <% if (a.description) { %><div class="card mt msgbody"><%= a.description %></div><% } %>
+    </div>
+    <div class="card">
+      <h2>Tu progreso</h2>
+      <div style="display:flex;align-items:center;gap:.6rem"><div class="bar" style="flex:1;height:14px"><i id="vp-bar" style="width:0%"></i></div><b id="vp-pct">0%</b></div>
+      <p class="small muted">Necesitas ver al menos <b><%= minPct %>%</b>. Sólo cuenta lo que ves en reproducción normal: adelantar no suma.</p>
+      <ul class="small" style="padding-left:1.1rem">
+        <li>Puedes pausar y continuar después; tu avance se guarda.</li>
+        <li>El video se pausa si cambias de pestaña.</li>
+        <% if (presenceMin > 0) { %><li>Cada <%= presenceMin %> minutos te preguntaremos "¿Sigues ahí?".</li><% } %>
+      </ul>
+      <p class="small" id="vp-msg" style="color:#9a3d06"></p>
+      <div id="vp-done" hidden class="flash ok">
+        <b>¡Completaste el video!</b><br>Último paso: tu progress report.
+        <% if (!hasReport) { %><div class="mt"><a class="btn ok" href="/assignments/<%= a.id %>/report">📝 Completar progress report</a></div><% } %>
+      </div>
+    </div>
+  </div>
+  <div id="player-root" data-config="<%= JSON.stringify({
+    src, endpoint: '/assignments/' + a.id + '/watch/progress', minPct, presenceMin,
+    duration: progress ? progress.duration_sec : 0, intervals: progress ? JSON.parse(progress.intervals) : [],
+    pct: progress ? progress.pct : 0, lastPosition: progress ? progress.last_position : 0,
+    presence: progress ? progress.presence_checks : 0, completed: !!(progress && progress.completed_at) }) %>"></div>
+  <script src="/public/player.js"></script>
+<% } %>
+<%- include('partials/foot') %>

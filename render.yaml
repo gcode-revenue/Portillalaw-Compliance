@@ -54,3 +54,10 @@ services:
         sync: false
       - key: TWILIO_FROM
         sync: false
+      # Asistencia automática de Zoom (app Server-to-Server OAuth)
+      - key: ZOOM_ACCOUNT_ID
+        sync: false
+      - key: ZOOM_CLIENT_ID
+        sync: false
+      - key: ZOOM_CLIENT_SECRET
+        sync: false

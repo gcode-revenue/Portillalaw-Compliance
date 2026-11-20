@@ -178,6 +178,38 @@ CREATE INDEX IF NOT EXISTS idx_msg_rcpt ON messages(recipient_id, read_at);
 CREATE INDEX IF NOT EXISTS idx_users_company ON users(company_id);
 `);
 
+// --- Migraciones (columnas añadidas después de la versión inicial) ---
+function addColumn(table, column, ddl) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all().map((c) => c.name);
+  if (!cols.includes(column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+}
+addColumn('trainings', 'due_at', 'TEXT');                 // fecha límite (videos a su ritmo)
+addColumn('trainings', 'zoom_meeting_id', 'TEXT');        // opcional; si no, se extrae del enlace
+addColumn('assignments', 'attendance_source', 'TEXT');    // plataforma, enlace, video, zoom, staff
+addColumn('assignments', 'attended_minutes', 'REAL');
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS video_progress (
+  assignment_id INTEGER PRIMARY KEY REFERENCES assignments(id) ON DELETE CASCADE,
+  duration_sec REAL,
+  intervals TEXT NOT NULL DEFAULT '[]',   -- tramos vistos [[inicio,fin],...] en segundos
+  watched_sec REAL NOT NULL DEFAULT 0,
+  pct INTEGER NOT NULL DEFAULT 0,
+  last_position REAL DEFAULT 0,
+  presence_checks INTEGER NOT NULL DEFAULT 0,  -- veces que respondió "¿Sigues ahí?"
+  started_at TEXT,
+  completed_at TEXT,
+  updated_at TEXT
+);
+CREATE TABLE IF NOT EXISTS zoom_sync (
+  training_id INTEGER PRIMARY KEY REFERENCES trainings(id) ON DELETE CASCADE,
+  last_attempt_at TEXT,
+  synced_at TEXT,
+  participants INTEGER,
+  error TEXT
+);
+`);
+
 const DEFAULT_SETTINGS = {
   reminder_offsets_min: '1440,720,60,30,5',      // 24h, 12h, 1h, 30m, 5m
   checkin_open_min: '15',                        // check-in abre X min antes
@@ -188,6 +220,10 @@ const DEFAULT_SETTINGS = {
   unconfirmed_employer_min: '720',               // avisar al patrono si no confirmó a 12h
   weekly_report_cron: '0 8 * * 1',               // lunes 8:00 AM hora PR
   org_name: 'Portilla Law',
+  video_min_pct: '90',                           // % del video que debe verse para completarlo
+  video_presence_check_min: '10',                // "¿Sigues ahí?" cada X minutos de video
+  zoom_min_attendance_pct: '75',                 // % de la duración conectado en Zoom para contar asistencia
+  zoom_report_wait_min: '60',                    // esperar el reporte de Zoom antes de marcar ausente
 };
 const insSetting = db.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)');
 for (const [k, v] of Object.entries(DEFAULT_SETTINGS)) insSetting.run(k, v);

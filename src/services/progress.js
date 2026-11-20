@@ -46,10 +46,21 @@ function companyProgress(companyId) {
 }
 
 /** Checklist de redundancia por asignación: confirmó → check-in → finalizó → reporte → verificado */
+const SOURCE_LABELS = { video: 'reproductor del portal', zoom: 'reporte de Zoom', 'check-in': 'check-in', staff: 'verificado por staff' };
 function checklist(a, report) {
+  if (a.modality === 'video') {
+    return [
+      { label: 'Comenzó el video', done: !!a.checked_in_at, at: a.checked_in_at },
+      { label: `Vio el video completo${a.video_pct != null ? ` (${a.video_pct}% visto)` : ''}`, done: !!a.checked_out_at, at: a.checked_out_at },
+      ...(a.presence_checks ? [{ label: `Confirmó presencia ${a.presence_checks} vez/veces durante el video`, done: true }] : []),
+      { label: 'Progress report sometido', done: !!report, at: report?.submitted_at },
+      { label: 'Verificado por Portilla Law', done: !!a.verified_at, at: a.verified_at },
+    ];
+  }
+  const via = a.attendance_source ? ` (${SOURCE_LABELS[a.attendance_source] || a.attendance_source}${a.attended_minutes ? `, ${a.attended_minutes} min` : ''})` : '';
   return [
     { label: 'Confirmó asistencia', done: !!a.confirmed_at, at: a.confirmed_at, extra: a.confirmed_via },
-    { label: 'Check-in al entrenamiento', done: !!a.checked_in_at, at: a.checked_in_at },
+    { label: `Asistencia registrada${via}`, done: !!a.checked_in_at, at: a.checked_in_at },
     { label: 'Finalizó / check-out', done: !!a.checked_out_at, at: a.checked_out_at },
     { label: 'Progress report sometido', done: !!report, at: report?.submitted_at },
     { label: 'Verificado por Portilla Law', done: !!a.verified_at, at: a.verified_at },

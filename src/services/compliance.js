@@ -8,6 +8,7 @@ const { db, numList, getSetting, audit } = require('../db');
 const { notifyUser, internalMessage, APP_URL } = require('./notify');
 const { makeToken } = require('../util/tokens');
 const { fmt, addMin } = require('../util/time');
+const zoom = require('./zoom');
 
 const MIN = 60000;
 
@@ -53,7 +54,8 @@ async function notifyEmployers(subject, body, a, key, sms = false) {
 
 function activeAssignments() {
   return db.prepare(`
-    SELECT a.*, t.title, t.modality, t.starts_at, t.duration_min, t.location, t.meeting_url, t.hours_credit,
+    SELECT a.*, t.title, t.modality, t.starts_at, t.due_at, t.duration_min, t.location, t.meeting_url, t.zoom_meeting_id, t.hours_credit,
+           (SELECT pct FROM video_progress vp WHERE vp.assignment_id = a.id) AS video_pct,
            u.name AS emp_name, u.company_id, u.email, u.phone, u.notify_email, u.notify_sms, u.active AS emp_active
     FROM assignments a
     JOIN trainings t ON t.id = a.training_id
@@ -67,13 +69,23 @@ function empOf(a) {
     notify_sms: a.notify_sms, active: a.emp_active, company_id: a.company_id };
 }
 
+const isVideo = (a) => a.modality === 'video';
+/** Fin del entrenamiento: para videos, la fecha límite; para sesiones, inicio + duración. */
+function endOf(a) {
+  return isVideo(a) && a.due_at ? new Date(a.due_at).getTime() : new Date(a.starts_at).getTime() + a.duration_min * MIN;
+}
+/** Momento al que apuntan los recordatorios: inicio de la sesión, o fecha límite del video. */
+function anchorOf(a) { return isVideo(a) ? endOf(a) : new Date(a.starts_at).getTime(); }
+const watchUrl = (a) => `${APP_URL}/assignments/${a.id}/watch`;
+
 function whereText(a) {
   if (a.modality === 'presencial') return `Lugar: ${a.location || 'por confirmar'}`;
   if (a.modality === 'zoom') return `Zoom: ${a.meeting_url || 'enlace por enviar'}`;
-  return `Video: ${a.meeting_url || 'disponible en la plataforma'}`;
+  return `Video en el portal: ${watchUrl(a)}`;
 }
 
 async function processReminders(a, now) {
+  if (isVideo(a)) return processVideoReminders(a, now);
   const start = new Date(a.starts_at).getTime();
   if (now >= start || !['asignado', 'confirmado'].includes(a.status)) return;
   const offsets = numList('reminder_offsets_min').sort((x, y) => x - y);
@@ -81,7 +93,6 @@ async function processReminders(a, now) {
   const due = offsets.filter((off) => now >= start - off * MIN);
   if (!due.length) return;
   const off = due[0];
-  // No enviar recordatorios de offsets que ya pasaron antes de crear la asignación, salvo el actual
   const l = links(a);
   const left = remainingText(start - now);
   const confirmed = a.status === 'confirmado';
@@ -98,32 +109,64 @@ async function processReminders(a, now) {
   await notifyUser(empOf(a), { kind: 'recordatorio', subject, text, sms, actions, assignmentId: a.id, dedupeKey: `rem:${a.id}:${off}` });
 }
 
+/** Videos: recordar la fecha límite mientras no lo haya completado. */
+async function processVideoReminders(a, now) {
+  const due = endOf(a);
+  if (now >= due || now < new Date(a.starts_at).getTime() || !['asignado', 'confirmado', 'en_curso'].includes(a.status)) return;
+  const offsets = numList('reminder_offsets_min').sort((x, y) => x - y);
+  const dueOffsets = offsets.filter((off) => now >= due - off * MIN);
+  if (!dueOffsets.length) return;
+  const off = dueOffsets[0];
+  const left = remainingText(due - now);
+  const pct = a.video_pct || 0;
+  const subject = `Recordatorio: te quedan ${left} para completar "${a.title}"`;
+  const text = `Hola ${a.emp_name},\n\nTienes hasta el ${fmt(new Date(due).toISOString())} para ver el video "${a.title}" en el portal.\n` +
+    (pct > 0 ? `Llevas ${pct}% visto. Debes ver al menos ${getSetting('video_min_pct')}% para que cuente.` : 'Aún no lo has comenzado.') +
+    '\n\nAl terminar, completa tu progress report.';
+  await notifyUser(empOf(a), {
+    kind: 'recordatorio', subject, text,
+    sms: `Portilla Law: te quedan ${left} para ver "${a.title}"${pct ? ` (llevas ${pct}%)` : ''}. Velo aqui:`,
+    actions: [{ label: pct > 0 ? 'Continuar el video' : 'Ver el video', url: watchUrl(a), color: '#1b7f4b' }],
+    assignmentId: a.id, dedupeKey: `rem:${a.id}:${off}`,
+  });
+}
+
 async function processUnconfirmed(a, now) {
-  if (a.status !== 'asignado') return;
-  const start = new Date(a.starts_at).getTime();
+  if (isVideo(a)) {
+    if (a.checked_in_at || !['asignado', 'confirmado'].includes(a.status) || now < new Date(a.starts_at).getTime()) return;
+  } else if (a.status !== 'asignado') return;
+  const start = anchorOf(a);
   if (now >= start) return;
   const created = new Date(a.created_at.endsWith('Z') ? a.created_at : a.created_at + 'Z').getTime();
   if (now - created < 60 * MIN) return; // dar al menos 1 hora para responder
   const alertMin = Number(getSetting('unconfirmed_alert_min'));
   const employerMin = Number(getSetting('unconfirmed_employer_min'));
   if (now >= start - alertMin * MIN) {
-    if (openAlert('sin_confirmar', a, `${a.emp_name} no ha confirmado asistencia a "${a.title}" (${fmt(a.starts_at)}).`)) {
-      await notifyStaff(`Sin confirmar: ${a.emp_name}`, `${a.emp_name} no ha confirmado asistencia a "${a.title}" programado para ${fmt(a.starts_at)}.\nComunícate con el empleado para asegurar el cumplimiento.`, a, `unc:${a.id}`);
+    const what = isVideo(a)
+      ? `${a.emp_name} no ha comenzado el video "${a.title}" (fecha límite ${fmt(new Date(start).toISOString())}).`
+      : `${a.emp_name} no ha confirmado asistencia a "${a.title}" (${fmt(a.starts_at)}).`;
+    if (openAlert('sin_confirmar', a, what)) {
+      await notifyStaff(`${isVideo(a) ? 'Video sin comenzar' : 'Sin confirmar'}: ${a.emp_name}`, `${what}\nComunícate con el empleado para asegurar el cumplimiento.`, a, `unc:${a.id}`);
     }
   }
   if (now >= start - employerMin * MIN) {
-    await notifyEmployers(`Empleado sin confirmar: ${a.emp_name}`,
-      `Su empleado(a) ${a.emp_name} aún no ha confirmado su asistencia al entrenamiento "${a.title}" (${fmt(a.starts_at)}).\nLe agradecemos recordarle la importancia de asistir para mantener el cumplimiento del programa.`,
-      a, `unc-emp:${a.id}`);
+    const what = isVideo(a)
+      ? `Su empleado(a) ${a.emp_name} aún no ha comenzado el video de adiestramiento "${a.title}", cuya fecha límite es ${fmt(new Date(start).toISOString())}.`
+      : `Su empleado(a) ${a.emp_name} aún no ha confirmado su asistencia al entrenamiento "${a.title}" (${fmt(a.starts_at)}).`;
+    await notifyEmployers(`Empleado ${isVideo(a) ? 'sin comenzar video' : 'sin confirmar'}: ${a.emp_name}`,
+      `${what}\nLe agradecemos recordarle la importancia de completarlo para mantener el cumplimiento del programa.`, a, `unc-emp:${a.id}`);
   }
 }
 
 async function processEnded(a, now) {
-  const end = new Date(a.starts_at).getTime() + a.duration_min * MIN;
+  const end = endOf(a);
   const grace = Number(getSetting('absence_grace_min')) * MIN;
   if (!['asignado', 'confirmado', 'en_curso'].includes(a.status) || now < end + grace) return;
+  // Zoom: esperar el reporte de participantes antes de declarar una ausencia
+  if (a.modality === 'zoom' && !a.checked_in_at && zoom.configured() && zoom.meetingIdFrom(a) &&
+      now < end + Number(getSetting('zoom_report_wait_min')) * MIN) return;
 
-  if (a.checked_in_at) {
+  if (a.checked_in_at && !isVideo(a)) {
     const hasReport = db.prepare('SELECT 1 FROM progress_reports WHERE assignment_id = ?').get(a.id);
     const newStatus = hasReport ? 'completado' : 'pendiente_reporte';
     db.prepare(`UPDATE assignments SET status = ?, checked_out_at = COALESCE(checked_out_at, ?), completed_at = CASE WHEN ? = 'completado' THEN ? ELSE completed_at END WHERE id = ?`)
@@ -131,19 +174,22 @@ async function processEnded(a, now) {
     a.status = newStatus;
     return;
   }
-  // Sin check-in: ausencia
+  // Sin check-in (o video sin completar a la fecha límite): ausencia
   db.prepare("UPDATE assignments SET status = 'ausente' WHERE id = ?").run(a.id);
   db.prepare("UPDATE compliance_alerts SET status = 'resuelta', resolution = 'Reemplazada por alerta de ausencia', resolved_at = ? WHERE assignment_id = ? AND type = 'sin_confirmar' AND status = 'abierta'")
     .run(new Date(now).toISOString(), a.id);
   audit(null, 'marcar_ausente_auto', 'assignment', a.id, { training: a.title });
   a.status = 'ausente';
-  if (openAlert('ausencia', a, `${a.emp_name} no asistió a "${a.title}" (${fmt(a.starts_at)}).`)) {
-    const body = `${a.emp_name} NO registró asistencia al entrenamiento "${a.title}" del ${fmt(a.starts_at)}.\nEl empleado queda FUERA DE CUMPLIMIENTO hasta que se reprograme o se excuse la ausencia.`;
+  const missed = isVideo(a)
+    ? `${a.emp_name} no completó el video "${a.title}" antes de la fecha límite (${a.video_pct || 0}% visto).`
+    : `${a.emp_name} no asistió a "${a.title}" (${fmt(a.starts_at)}).`;
+  if (openAlert('ausencia', a, missed)) {
+    const body = `${isVideo(a) ? missed : `${a.emp_name} NO registró asistencia al entrenamiento "${a.title}" del ${fmt(a.starts_at)}.`}\nEl empleado queda FUERA DE CUMPLIMIENTO hasta que se reprograme o se excuse la ausencia.`;
     await notifyStaff(`AUSENCIA: ${a.emp_name} — ${a.title}`, body, a, `abs:${a.id}`);
     await notifyEmployers(`Ausencia de empleado: ${a.emp_name}`, body, a, `abs-emp:${a.id}`, true);
     await notifyUser(empOf(a), {
-      kind: 'ausencia', subject: `No registramos tu asistencia a "${a.title}"`,
-      text: `Hola ${a.emp_name},\n\nNo registramos tu asistencia al entrenamiento "${a.title}" del ${fmt(a.starts_at)}. Esto afecta tu cumplimiento con el Programa de Aprendizaje.\nSi asististe o tuviste una situación, comunícate con Portilla Law hoy mismo respondiendo en la plataforma.`,
+      kind: 'ausencia', subject: isVideo(a) ? `No completaste el video "${a.title}"` : `No registramos tu asistencia a "${a.title}"`,
+      text: `Hola ${a.emp_name},\n\n${isVideo(a) ? `No completaste el video "${a.title}" antes de la fecha límite (${a.video_pct || 0}% visto).` : `No registramos tu asistencia al entrenamiento "${a.title}" del ${fmt(a.starts_at)}.`} Esto afecta tu cumplimiento con el Programa de Aprendizaje.\nSi asististe o tuviste una situación, comunícate con Portilla Law hoy mismo respondiendo en la plataforma.`,
       sms: `Portilla Law: no registramos tu asistencia a "${a.title}". Comunicate con nosotros hoy.`,
       actions: [{ label: 'Escribir a Portilla Law', url: `${APP_URL}/messages/new` }], assignmentId: a.id, dedupeKey: `abs-ee:${a.id}`,
     });
@@ -152,7 +198,8 @@ async function processEnded(a, now) {
 
 async function processReports(a, now) {
   if (a.status !== 'pendiente_reporte') return;
-  const end = new Date(a.starts_at).getTime() + a.duration_min * MIN;
+  // Los seguimientos cuentan desde que terminó (al completar un video, puede ser antes de la fecha límite)
+  const end = a.checked_out_at ? Math.min(new Date(a.checked_out_at).getTime(), endOf(a)) : endOf(a);
   const l = links(a);
   const steps = [0, ...numList('report_followup_hours')];
   const due = steps.filter((h) => now >= end + h * 3600000);
@@ -183,6 +230,7 @@ async function tick(nowDate = new Date()) {
   const now = new Date(nowDate).getTime();
   let processed = 0;
   try {
+    try { await zoom.syncPending(now); } catch (e) { console.error('[zoom]', e); }
     for (const a of activeAssignments()) {
       try {
         await processEnded(a, now);
@@ -210,19 +258,24 @@ function confirmAssignment(id, via) {
 }
 
 function checkInWindow(t, now = Date.now()) {
+  if (isVideo(t)) {
+    const open = new Date(t.starts_at).getTime(), close = endOf(t);
+    return { open, close, isOpen: now >= open && now <= close };
+  }
   const open = new Date(t.starts_at).getTime() - Number(getSetting('checkin_open_min')) * MIN;
   const close = new Date(t.starts_at).getTime() + t.duration_min * MIN;
   return { open, close, isOpen: now >= open && now <= close };
 }
 
 function checkIn(id, now = Date.now()) {
-  const a = db.prepare('SELECT a.*, t.starts_at, t.duration_min FROM assignments a JOIN trainings t ON t.id = a.training_id WHERE a.id = ?').get(id);
+  const a = db.prepare('SELECT a.*, t.starts_at, t.due_at, t.modality, t.duration_min FROM assignments a JOIN trainings t ON t.id = a.training_id WHERE a.id = ?').get(id);
   if (!a) return { ok: false, error: 'Asignación no encontrada' };
+  if (isVideo(a)) return { ok: false, error: 'En los entrenamientos en video la asistencia se registra automáticamente al ver el video en el portal.' };
   if (a.checked_in_at) return { ok: true, already: true };
   if (!['asignado', 'confirmado'].includes(a.status)) return { ok: false, error: 'Esta asignación ya no admite check-in.' };
   const w = checkInWindow(a, now);
   if (!w.isOpen) return { ok: false, error: `El check-in está disponible desde ${fmt(new Date(w.open).toISOString())} hasta ${fmt(new Date(w.close).toISOString())}.` };
-  db.prepare(`UPDATE assignments SET status = 'en_curso', checked_in_at = ?, confirmed_at = COALESCE(confirmed_at, ?), confirmed_via = COALESCE(confirmed_via, 'check-in') WHERE id = ?`)
+  db.prepare(`UPDATE assignments SET status = 'en_curso', checked_in_at = ?, confirmed_at = COALESCE(confirmed_at, ?), confirmed_via = COALESCE(confirmed_via, 'check-in'), attendance_source = COALESCE(attendance_source, 'check-in') WHERE id = ?`)
     .run(new Date(now).toISOString(), new Date(now).toISOString(), id);
   db.prepare("UPDATE compliance_alerts SET status = 'resuelta', resolution = 'El empleado hizo check-in', resolved_at = ? WHERE assignment_id = ? AND type = 'sin_confirmar' AND status = 'abierta'")
     .run(new Date(now).toISOString(), id);
@@ -249,10 +302,20 @@ function submitReport(assignmentId, employeeId, data) {
 
 /** Notificación inmediata al asignar un entrenamiento. */
 async function notifyAssigned(assignmentId) {
-  const a = db.prepare(`SELECT a.*, t.title, t.modality, t.starts_at, t.duration_min, t.location, t.meeting_url,
+  const a = db.prepare(`SELECT a.*, t.title, t.modality, t.starts_at, t.due_at, t.duration_min, t.location, t.meeting_url,
       u.name AS emp_name, u.company_id, u.email, u.phone, u.notify_email, u.notify_sms, u.active AS emp_active
     FROM assignments a JOIN trainings t ON t.id = a.training_id JOIN users u ON u.id = a.employee_id WHERE a.id = ?`).get(assignmentId);
   if (!a) return;
+  if (isVideo(a)) {
+    const due = fmt(new Date(endOf(a)).toISOString());
+    return notifyUser(empOf(a), {
+      kind: 'asignacion', subject: `Nuevo video de adiestramiento: "${a.title}"`,
+      text: `Hola ${a.emp_name},\n\nSe te asignó el video de adiestramiento "${a.title}" (${a.duration_min} min). Puedes verlo en el portal desde el ${fmt(a.starts_at)} hasta el ${due}.\n\nDebes ver al menos ${getSetting('video_min_pct')}% del video (adelantarlo no cuenta) y luego completar tu progress report. Recibirás recordatorios antes de la fecha límite.`,
+      sms: `Portilla Law: tienes un video de adiestramiento "${a.title}" para ver antes del ${due}:`,
+      actions: [{ label: 'Ver el video', url: watchUrl(a), color: '#1b7f4b' }],
+      assignmentId: a.id, dedupeKey: `asg:${a.id}`,
+    });
+  }
   await notifyUser(empOf(a), {
     kind: 'asignacion', subject: `Nuevo entrenamiento asignado: "${a.title}"`,
     text: `Hola ${a.emp_name},\n\nSe te asignó el entrenamiento "${a.title}" (${a.modality}) para el ${fmt(a.starts_at)}.\n${whereText(a)}\n\nPor favor confirma tu asistencia. Recibirás recordatorios 24 horas, 12 horas, 1 hora, 30 minutos y 5 minutos antes.`,
@@ -262,4 +325,4 @@ async function notifyAssigned(assignmentId) {
   });
 }
 
-module.exports = { tick, confirmAssignment, checkIn, checkInWindow, submitReport, notifyAssigned, links, staffUsers, employerUsers, addMin };
+module.exports = { tick, confirmAssignment, checkIn, checkInWindow, submitReport, notifyAssigned, links, staffUsers, employerUsers, addMin, endOf };

@@ -33,12 +33,13 @@ const e = [
   user('Pedro Colón', 'pedro@demo.com', 'employee', c2, { job: 'Técnico de récords médicos', hours: 16, phone: '787-555-1005' }),
 ];
 
-const tr = (title, modality, startH, company, hours = 2, extra = {}) => db.prepare(`INSERT INTO trainings (title, description, modality, starts_at, duration_min, hours_credit, location, meeting_url, instructor, company_id, created_by)
-  VALUES (?,?,?,?,?,?,?,?,?,?,?)`).run(title, extra.desc || null, modality, at(startH), hours * 60, hours, extra.loc || null, extra.url || null, extra.inst || 'Instructor certificado', company, admin).lastInsertRowid;
+const tr = (title, modality, startH, company, hours = 2, extra = {}) => db.prepare(`INSERT INTO trainings (title, description, modality, starts_at, due_at, duration_min, hours_credit, location, meeting_url, instructor, company_id, created_by)
+  VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`).run(title, extra.desc || null, modality, at(startH), extra.dueH != null ? at(extra.dueH) : null, extra.min || hours * 60, hours, extra.loc || null, extra.url || null, extra.inst || 'Instructor certificado', company, admin).lastInsertRowid;
 
 const t1 = tr('Seguridad OSHA 10 — Módulo 1', 'presencial', -24 * 6, c1, 4, { loc: 'Centro de Adiestramiento, Bayamón' });
 const t2 = tr('Lectura de planos', 'zoom', -24 * 2, c1, 2, { url: 'https://zoom.us/j/123456789' });
-const t3 = tr('Código eléctrico NEC — Introducción', 'video', 0.4, c1, 2, { url: 'https://example.com/video/nec' });
+const t3 = tr('Código eléctrico NEC — Introducción', 'video', -24, c1, 2, { url: process.env.SEED_VIDEO_URL || 'https://www.youtube.com/watch?v=aqz-KE-bpKQ', dueH: 48, min: 10,
+  desc: 'Video introductorio a la estructura del Código Eléctrico Nacional (NEC). Véalo completo y luego complete su progress report.' });
 const t4 = tr('Seguridad OSHA 10 — Módulo 2', 'presencial', 26, c1, 4, { loc: 'Centro de Adiestramiento, Bayamón' });
 const t5 = tr('HIPAA y confidencialidad', 'zoom', -24 * 3, c2, 2, { url: 'https://zoom.us/j/987654321' });
 const t6 = tr('Codificación ICD-10 básica', 'zoom', 11, c2, 3, { url: 'https://zoom.us/j/555555555' });
@@ -55,7 +56,9 @@ for (const emp of e.slice(0, 3)) asg(t1, emp, 'completado', done(-24 * 6));
 asg(t2, e[0], 'completado', done(-48));
 asg(t2, e[1], 'pendiente_reporte', { conf: at(-60), in: at(-48), out: at(-46) });
 const absent = asg(t2, e[2], 'ausente');
-for (const emp of e.slice(0, 3)) asg(t3, emp, emp === e[0] ? 'confirmado' : 'asignado', emp === e[0] ? { conf: at(-5) } : {});
+for (const emp of e.slice(0, 3)) asg(t3, emp, emp === e[0] ? 'en_curso' : 'asignado', emp === e[0] ? { conf: at(-5), in: at(-5) } : {});
+db.prepare("INSERT INTO video_progress (assignment_id, duration_sec, intervals, watched_sec, pct, last_position, presence_checks, started_at, updated_at) SELECT a.id, 600, '[[0,270]]', 270, 45, 270, 1, ?, ? FROM assignments a WHERE a.training_id = ? AND a.employee_id = ?")
+  .run(at(-5), at(-5), t3, e[0]);
 for (const emp of e.slice(0, 3)) asg(t4, emp, 'asignado');
 asg(t5, e[3], 'completado', done(-72));
 asg(t5, e[4], 'completado', done(-72));

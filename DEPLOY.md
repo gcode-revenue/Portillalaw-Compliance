@@ -94,7 +94,54 @@ Guarde. Render reinicia el servicio solo. Luego, en el portal: **Configuración 
 
 ---
 
-## Paso 5 — Cargar su información real
+## Paso 5 — Videos de entrenamiento
+
+Los videos se ven **dentro del portal**, con seguimiento de lo que cada empleado vio. El portal **no guarda los archivos de video**: se enlazan desde una de estas plataformas.
+
+| Opción | Costo | Privacidad | Recomendación |
+|---|---|---|---|
+| **YouTube "No listado"** | Gratis | Cualquiera con el enlace puede verlo | Para empezar |
+| **Vimeo** (Starter/Standard) | ≈ $12–25/mes | Puede restringir el video para que **sólo se reproduzca en portal.portillalaw.com** | La mejor para contenido propio |
+| Archivo **MP4** en almacenamiento en la nube (Bunny, Cloudflare R2, S3) | Centavos por GB | Enlace privado | Además bloquea el adelanto dentro del reproductor |
+
+Al crear un entrenamiento con modalidad **Video**: pegue el enlace del video, la fecha en que queda disponible, la **fecha límite** y la duración del video.
+
+Cómo funciona el seguimiento:
+- Sólo cuenta lo que se ve en reproducción normal; adelantar no suma. Con archivos MP4 el adelanto está bloqueado.
+- El video se pausa si el empleado cambia de pestaña.
+- Cada 10 minutos aparece **"¿Sigues ahí?"** y el video no continúa hasta que lo confirme.
+- Al ver el **90%** se marca completo y se le pide el progress report.
+- Recordatorios antes de la **fecha límite**. Si no lo comienza, se le avisa a usted y luego al patrono. Si no lo completa a tiempo, queda **ausente** con alerta.
+- Los porcentajes y los tiempos se cambian en **Configuración**.
+
+---
+
+## Paso 6 — Asistencia automática de Zoom
+
+Requiere una cuenta **Zoom Pro o superior** (la que usa para crear las reuniones).
+
+1. Entre a **https://marketplace.zoom.us** con la cuenta administradora → **Develop → Build App** → **Server-to-Server OAuth**.
+2. Nombre: "Portal Portilla Law". En **Scopes** añada `report:read:list_meeting_participants:admin` (en cuentas antiguas aparece como `report:read:admin`).
+3. Active la app y copie **Account ID**, **Client ID** y **Client Secret** a Render → Environment:
+
+   | Variable | Valor |
+   |---|---|
+   | `ZOOM_ACCOUNT_ID` | Account ID |
+   | `ZOOM_CLIENT_ID` | Client ID |
+   | `ZOOM_CLIENT_SECRET` | Client Secret |
+
+4. Al crear un entrenamiento de modalidad **Zoom**, pegue el enlace de la reunión (`https://zoom.us/j/...`).
+
+Cómo funciona:
+- Al terminar la reunión, el portal descarga el reporte de participantes de Zoom. Lo intenta cada 10 minutos durante el día.
+- Busca a cada empleado por **email**, y si no inició sesión en Zoom, por su **nombre**. Pida a los empleados que entren con su nombre completo.
+- Si estuvo conectado al menos el **75%** de la sesión, se marca **presente** con los minutos exactos. Si estuvo menos, queda una nota con los minutos.
+- Antes de marcar a alguien ausente, el portal espera 60 minutos por el reporte de Zoom.
+- En la página del entrenamiento hay un botón **"Importar ahora"**.
+
+---
+
+## Paso 7 — Cargar su información real
 
 Dentro del portal, como presidente:
 

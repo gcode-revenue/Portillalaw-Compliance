@@ -8,13 +8,24 @@
     <div><label>Fecha y hora (hora de PR) *</label><input type="datetime-local" name="starts_at" value="<%= isoToLocalInput(t.starts_at) %>" required></div>
     <div><label>Duración (minutos)</label><input type="number" min="5" name="duration_min" value="<%= t.duration_min %>"></div>
     <div><label>Horas de crédito</label><input type="number" step="0.25" min="0" name="hours_credit" value="<%= t.hours_credit %>"></div>
-    <div><label>Lugar (presencial)</label><input name="location" value="<%= t.location || '' %>"></div>
-    <div><label>Enlace Zoom / video</label><input name="meeting_url" type="url" value="<%= t.meeting_url || '' %>"></div>
+    <div data-show="presencial"><label>Lugar</label><input name="location" value="<%= t.location || '' %>"></div>
+    <div data-show="zoom video"><label id="url-label">Enlace</label><input name="meeting_url" type="url" value="<%= t.meeting_url || '' %>"></div>
+    <div data-show="video"><label>Fecha límite para verlo (hora de PR) *</label><input type="datetime-local" name="due_at" value="<%= isoToLocalInput(t.due_at) %>"></div>
+    <div data-show="zoom"><label>ID de reunión Zoom (opcional)</label><input name="zoom_meeting_id" value="<%= t.zoom_meeting_id || '' %>" placeholder="Se toma del enlace si se deja vacío"></div>
     <div><label>Instructor</label><input name="instructor" value="<%= t.instructor || '' %>"></div>
     <div><label>Compañía (vacío = abierto a varias)</label><select name="company_id"><option value="">— Varias compañías —</option>
       <% companies.forEach(function(c){ %><option value="<%= c.id %>" <%= Number(t.company_id) === c.id ? 'selected' : '' %>><%= c.name %></option><% }) %></select></div>
   </div>
+  <div class="small muted" data-show="video"><b>Videos:</b> enlace de YouTube (puede ser "no listado"), Vimeo, o archivo MP4. El empleado lo ve dentro del portal; sólo cuenta lo visto en reproducción normal. "Fecha y hora" es cuándo queda disponible; los recordatorios se envían antes de la fecha límite. En "Duración" ponga el largo del video.</div>
+  <div class="small muted" data-show="zoom"><b>Zoom:</b> si la cuenta de Zoom está conectada, la asistencia se marca automáticamente con el reporte de participantes al terminar la reunión.</div>
   <p class="small muted">Los empleados asignados recibirán recordatorios automáticos por email y SMS según la configuración (por defecto 24 h, 12 h, 1 h, 30 min y 5 min antes).</p>
+  <script>
+    (function(){ var sel=document.querySelector('select[name=modality]');
+      function upd(){ var m=sel.value; document.querySelectorAll('[data-show]').forEach(function(el){ el.style.display = el.getAttribute('data-show').split(' ').indexOf(m) >= 0 ? '' : 'none'; });
+        document.getElementById('url-label').textContent = m === 'video' ? 'Enlace del video (YouTube, Vimeo o MP4) *' : 'Enlace de Zoom';
+        document.querySelector('input[name=due_at]').required = m === 'video'; }
+      sel.addEventListener('change', upd); upd(); })();
+  </script>
   <button class="btn mt">Guardar</button>
 </form>
 <%- include('partials/foot') %>

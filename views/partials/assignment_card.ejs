@@ -2,16 +2,28 @@
   <div style="display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap">
     <div><b><%= a.title %></b> <span class="pill <%= a.status %>"><%= STATUS_LABELS[a.status] %></span>
       <div class="small muted"><%= fmt(a.starts_at) %> · <%= MODALITY_LABELS[a.modality] %> · <%= a.duration_min %> min · <%= a.hours_credit %> h crédito</div>
-      <div class="small"><% if (a.modality === 'presencial') { %>📍 <%= a.location || 'Lugar por confirmar' %><% } else if (a.meeting_url) { %>🔗 <a href="<%= a.meeting_url %>" target="_blank" rel="noopener"><%= a.modality === 'zoom' ? 'Enlace de Zoom' : 'Ver video' %></a><% } %></div>
+      <% if (a.modality === 'video') { %>
+        <div class="small">⏳ Fecha límite: <b><%= fmt(a.due_at) %></b></div>
+        <div style="max-width:260px;margin-top:.3rem"><%- include('bar', { pct: a.video_pct || 0 }) %></div>
+      <% } else { %>
+      <div class="small"><% if (a.modality === 'presencial') { %>📍 <%= a.location || 'Lugar por confirmar' %><% } else if (a.meeting_url) { %>🔗 <a href="<%= a.meeting_url %>" target="_blank" rel="noopener">Enlace de Zoom</a><% } %></div>
+      <% } %>
     </div>
     <div style="min-width:220px"><%- include('checklist', { items: a.checklist }) %></div>
   </div>
   <div class="actions">
+    <% if (a.modality === 'video') { %>
+      <% if (['asignado','confirmado','en_curso'].includes(a.status)) { %>
+        <% if (a.window.isOpen) { %><a class="btn ok sm" href="/assignments/<%= a.id %>/watch">▶ <%= a.video_pct ? 'Continuar video (' + a.video_pct + '%)' : 'Ver video' %></a>
+        <% } else { %><span class="small muted">Disponible desde <%= fmt(a.starts_at) %></span><% } %>
+      <% } %>
+    <% } else { %>
     <% if (a.status === 'asignado') { %><form class="inline" method="post" action="/assignments/<%= a.id %>/confirm"><button class="btn ok sm">✔ Confirmar asistencia</button></form><% } %>
     <% if (['asignado','confirmado'].includes(a.status)) { %>
       <form class="inline" method="post" action="/assignments/<%= a.id %>/checkin"><button class="btn sm" <%= a.window.isOpen ? '' : 'disabled' %> title="Disponible <%= fmt(new Date(a.window.open).toISOString()) %>">📍 Check-in</button></form>
       <% if (!a.window.isOpen) { %><span class="small muted">Check-in disponible desde <%= fmt(new Date(a.window.open).toISOString()) %></span><% } %>
     <% } %>
-    <% if (['en_curso','pendiente_reporte'].includes(a.status) && !a.report_id) { %><a class="btn ok sm" href="/assignments/<%= a.id %>/report">📝 Completar progress report</a><% } %>
+    <% } %>
+    <% if (((a.modality !== 'video' && a.status === 'en_curso') || a.status === 'pendiente_reporte') && !a.report_id) { %><a class="btn ok sm" href="/assignments/<%= a.id %>/report">📝 Completar progress report</a><% } %>
   </div>
 </div>

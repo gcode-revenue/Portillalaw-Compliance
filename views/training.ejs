@@ -11,7 +11,13 @@
     <div class="small"><b>Instructor:</b> <%= t.instructor || '—' %></div>
     <% if (t.location) { %><div class="small"><b>Lugar:</b> <%= t.location %></div><% } %>
     <% if (t.meeting_url) { %><div class="small"><b>Enlace:</b> <a href="<%= t.meeting_url %>" target="_blank" rel="noopener"><%= t.meeting_url %></a></div><% } %>
-    <div class="small"><b>Ventana de check-in:</b> <%= fmt(new Date(window.open).toISOString()) %> – <%= fmt(new Date(window.close).toISOString()) %> <%= window.isOpen ? '🟢 abierta' : '' %></div>
+    <% if (t.modality === 'video') { %><div class="small"><b>Disponible:</b> <%= fmt(t.starts_at) %> · <b>Fecha límite:</b> <%= fmt(t.due_at) %> · mínimo <%= videoMinPct %>% visto</div><% } %>
+    <% if (zoomInfo) { %><div class="small"><b>Asistencia automática Zoom:</b>
+      <% if (!zoomInfo.configured) { %><span class="muted">Zoom no conectado</span>
+      <% } else if (!zoomInfo.meetingId) { %><span class="muted">sin ID de reunión</span>
+      <% } else { %>reunión <%= zoomInfo.meetingId %> · <%= zoomInfo.sync && zoomInfo.sync.synced_at ? 'importado ' + fmt(zoomInfo.sync.synced_at) + ' (' + zoomInfo.sync.participants + ' participantes)' : (zoomInfo.sync && zoomInfo.sync.error ? zoomInfo.sync.error : 'se importará al terminar') %>
+        <% if (isStaff) { %><form class="inline" method="post" action="/trainings/<%= t.id %>/zoom-sync"><button class="btn sm ghost">Importar ahora</button></form><% } %><% } %></div><% } %>
+    <% if (t.modality !== 'video') { %><div class="small"><b>Ventana de check-in:</b> <%= fmt(new Date(window.open).toISOString()) %> – <%= fmt(new Date(window.close).toISOString()) %> <%= window.isOpen ? '🟢 abierta' : '' %></div><% } %>
   </div>
   <% if (isStaff && !t.cancelled) { %>
   <div class="card"><h2>Asignar empleados</h2>
@@ -33,7 +39,9 @@
   <% roster.forEach(function(a){ %>
   <tr><td><% if (user.role !== 'employee') { %><a href="/employees/<%= a.employee_id %>"><%= a.emp_name %></a><% } else { %><%= a.emp_name %><% } %><div class="small muted"><%= a.company_name %> <%= a.phone ? '· ' + a.phone : '' %></div>
       <% if (a.notes) { %><div class="small msgbody muted"><%= a.notes %></div><% } %></td>
-    <td><span class="pill <%= a.status %>"><%= STATUS_LABELS[a.status] %></span></td>
+    <td><span class="pill <%= a.status %>"><%= STATUS_LABELS[a.status] %></span>
+      <% if (t.modality === 'video') { %><div style="margin-top:.4rem;min-width:120px"><%- include('partials/bar', { pct: a.video_pct || 0 }) %></div><% if (a.video_seen_at) { %><div class="small muted">Última actividad <%= fmt(a.video_seen_at) %></div><% } %><% } %>
+      <% if (a.attended_minutes && t.modality !== 'video') { %><div class="small muted"><%= a.attended_minutes %> min conectado</div><% } %></td>
     <td><%- include('partials/checklist', { items: a.checklist }) %></td>
     <% if (user.role !== 'employee') { %><td class="noprint"><%- include('partials/assignment_actions', { a: a }) %></td><% } %></tr>
   <% }) %>

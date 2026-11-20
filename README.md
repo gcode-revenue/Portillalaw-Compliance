@@ -27,7 +27,9 @@ Plataforma interna para gestionar el ciclo completo del **Programa de Aprendizaj
 7. **Checklist de redundancia** por entrenamiento: confirmó → check-in → finalizó → progress report → verificado por Portilla Law.
 8. **Gauge de progreso**: horas completadas / máximo(horas asignadas, meta del empleado).
 9. **Reporte semanal** a cada patrono todos los lunes 8:00 AM (hora PR), también imprimible/PDF y enviable a demanda.
-10. **Bitácora de comunicaciones** y **registro de auditoría**: constancia de cada mensaje y acción para fines de cumplimiento y facturación.
+10. **Videos dentro del portal** (YouTube, Vimeo o MP4) con seguimiento real: sólo cuenta lo visto, pausa al cambiar de pestaña, "¿Sigues ahí?" periódico, completado al 90%, recordatorios y alerta por fecha límite.
+11. **Asistencia automática de Zoom**: al terminar la reunión se importa el reporte de participantes y se marca presente a quien estuvo conectado el 75% (por email o nombre).
+12. **Bitácora de comunicaciones** y **registro de auditoría**: constancia de cada mensaje y acción para fines de cumplimiento y facturación.
 
 Sin credenciales SMTP/Twilio los envíos quedan como *simulado* en la bitácora, así que todo funciona en desarrollo.
 

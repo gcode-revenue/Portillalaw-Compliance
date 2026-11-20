@@ -41,7 +41,8 @@ router.get('/', requireLogin, (req, res) => {
   }
   // Empleado
   const progress = employeeProgress(u.id);
-  const assignments = db.prepare(`SELECT a.*, t.title, t.modality, t.starts_at, t.duration_min, t.location, t.meeting_url, t.hours_credit, t.instructor,
+  const assignments = db.prepare(`SELECT a.*, t.title, t.modality, t.starts_at, t.due_at, t.duration_min, t.location, t.meeting_url, t.hours_credit, t.instructor,
+      (SELECT pct FROM video_progress vp WHERE vp.assignment_id = a.id) video_pct,
       (SELECT id FROM progress_reports p WHERE p.assignment_id = a.id) report_id,
       (SELECT submitted_at FROM progress_reports p WHERE p.assignment_id = a.id) report_at
     FROM assignments a JOIN trainings t ON t.id = a.training_id
