@@ -75,9 +75,9 @@ router.post('/users/:id', requireRole('admin', 'staff', 'employer'), (req, res) 
   const companyId = isStaff(req.user) ? (b.company_id ? Number(b.company_id) : null) : u.company_id;
   // Sólo el presidente (admin) puede conceder acceso a gastos
   const canExp = req.user.role === 'admin' ? (role === 'staff' && b.can_view_expenses ? 1 : 0) : u.can_view_expenses;
-  db.prepare(`UPDATE users SET name=?, email=?, phone=?, role=?, company_id=?, job_title=?, required_hours=?, can_view_expenses=?, notify_email=?, notify_sms=?, active=? WHERE id=?`)
+  db.prepare(`UPDATE users SET name=?, email=?, phone=?, role=?, company_id=?, job_title=?, required_hours=?, can_view_expenses=?, notify_email=?, notify_sms=?, notify_whatsapp=?, active=? WHERE id=?`)
     .run(b.name, b.email, b.phone || null, role, companyId, b.job_title || null, Number(b.required_hours) || 0, canExp,
-      b.notify_email ? 1 : 0, b.notify_sms ? 1 : 0, u.id === req.user.id ? 1 : (b.active ? 1 : 0), u.id);
+      b.notify_email ? 1 : 0, b.notify_sms ? 1 : 0, b.notify_whatsapp ? 1 : 0, u.id === req.user.id ? 1 : (b.active ? 1 : 0), u.id);
   if (b.password) db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(bcrypt.hashSync(b.password, 10), u.id);
   audit(req.user.id, 'editar_usuario', 'user', u.id, { can_view_expenses: canExp, role });
   req.flash('ok', 'Usuario actualizado.');

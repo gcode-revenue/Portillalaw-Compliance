@@ -187,6 +187,7 @@ addColumn('trainings', 'due_at', 'TEXT');                 // fecha límite (vide
 addColumn('trainings', 'zoom_meeting_id', 'TEXT');        // opcional; si no, se extrae del enlace
 addColumn('assignments', 'attendance_source', 'TEXT');    // plataforma, enlace, video, zoom, staff
 addColumn('assignments', 'attended_minutes', 'REAL');
+addColumn('users', 'notify_whatsapp', 'INTEGER DEFAULT 1');
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS video_progress (
@@ -220,6 +221,7 @@ const DEFAULT_SETTINGS = {
   unconfirmed_employer_min: '720',               // avisar al patrono si no confirmó a 12h
   weekly_report_cron: '0 8 * * 1',               // lunes 8:00 AM hora PR
   org_name: 'Portilla Law',
+  mobile_channels: 'sms,whatsapp',               // canales al celular: sms, whatsapp o ambos
   video_min_pct: '90',                           // % del video que debe verse para completarlo
   video_presence_check_min: '10',                // "¿Sigues ahí?" cada X minutos de video
   zoom_min_attendance_pct: '75',                 // % de la duración conectado en Zoom para contar asistencia

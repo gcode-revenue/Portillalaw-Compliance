@@ -31,7 +31,9 @@ Plataforma interna para gestionar el ciclo completo del **Programa de Aprendizaj
 11. **Asistencia automática de Zoom**: al terminar la reunión se importa el reporte de participantes y se marca presente a quien estuvo conectado el 75% (por email o nombre).
 12. **Bitácora de comunicaciones** y **registro de auditoría**: constancia de cada mensaje y acción para fines de cumplimiento y facturación.
 
-Sin credenciales SMTP/Twilio los envíos quedan como *simulado* en la bitácora, así que todo funciona en desarrollo.
+**Canales:** email por Microsoft 365 (Graph), SMS por Heymarket (o Twilio), WhatsApp por la API oficial de Meta. Los empleados responden **SI** para confirmar y **STOP** para detener un canal.
+
+Sin credenciales los envíos quedan como *simulado* en la bitácora, así que todo funciona en desarrollo.
 
 ## Ejecutar
 

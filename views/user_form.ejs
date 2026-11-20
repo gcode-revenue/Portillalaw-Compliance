@@ -24,6 +24,7 @@
   <% if (u.id) { %>
     <label class="check"><input type="checkbox" name="notify_email" <%= u.notify_email ? 'checked' : '' %>> Notificaciones por email</label>
     <label class="check"><input type="checkbox" name="notify_sms" <%= u.notify_sms ? 'checked' : '' %>> Notificaciones por SMS</label>
+    <label class="check"><input type="checkbox" name="notify_whatsapp" <%= u.notify_whatsapp ? 'checked' : '' %>> Notificaciones por WhatsApp</label>
     <label class="check"><input type="checkbox" name="active" <%= u.active ? 'checked' : '' %>> Usuario activo</label>
   <% } %>
   <button class="btn mt">Guardar</button>

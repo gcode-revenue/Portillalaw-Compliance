@@ -5,6 +5,7 @@
   <label>Teléfono celular (para SMS)</label><input name="phone" value="<%= user.phone || '' %>" placeholder="787-555-0000">
   <label class="check"><input type="checkbox" name="notify_email" <%= user.notify_email ? 'checked' : '' %>> Recibir recordatorios por email</label>
   <label class="check"><input type="checkbox" name="notify_sms" <%= user.notify_sms ? 'checked' : '' %>> Recibir recordatorios por SMS</label>
+  <label class="check"><input type="checkbox" name="notify_whatsapp" <%= user.notify_whatsapp ? 'checked' : '' %>> Recibir recordatorios por WhatsApp</label>
   <h2 class="mt">Cambiar contraseña</h2>
   <label>Contraseña actual</label><input type="password" name="current_password">
   <label>Nueva contraseña (mín. 8 caracteres)</label><input type="password" name="new_password">

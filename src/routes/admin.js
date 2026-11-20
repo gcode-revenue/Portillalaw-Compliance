@@ -4,6 +4,7 @@ const { db, getSetting, setSetting, audit, DEFAULT_SETTINGS } = require('../db')
 const { requireRole, requireStaff } = require('../auth');
 const { channelsStatus, notifyUser } = require('../services/notify');
 const zoom = require('../services/zoom');
+const providers = require('../services/providers');
 const compliance = require('../services/compliance');
 
 const router = express.Router();
@@ -32,6 +33,7 @@ const EDITABLE = {
   unconfirmed_employer_min: 'Aviso al patrono si no confirmó (minutos antes)',
   weekly_report_cron: 'Horario del reporte semanal (cron, hora PR; requiere reinicio)',
   org_name: 'Nombre de la organización',
+  mobile_channels: 'Canales al celular (sms, whatsapp — separados por coma)',
   video_min_pct: 'Videos: % mínimo que debe verse para completarlo',
   video_presence_check_min: 'Videos: preguntar "¿Sigues ahí?" cada X minutos (0 = nunca)',
   zoom_min_attendance_pct: 'Zoom: % de la sesión conectado para contar asistencia',
@@ -40,7 +42,8 @@ const EDITABLE = {
 
 router.get('/settings', requireRole('admin'), (req, res) => {
   const values = Object.fromEntries(Object.keys(EDITABLE).map((k) => [k, getSetting(k)]));
-  res.render('settings', { title: 'Configuración de automatizaciones', values, EDITABLE, DEFAULT_SETTINGS, channels: { ...channelsStatus(), zoom: zoom.configured() ? 'Zoom conectado' : 'No conectado' } });
+  res.render('settings', { title: 'Configuración de automatizaciones', values, EDITABLE, DEFAULT_SETTINGS, channels: { ...channelsStatus(), zoom: zoom.configured() ? 'Zoom conectado' : 'No conectado' }, inboxes: req.session.hmInboxes || null });
+  delete req.session.hmInboxes;
 });
 
 router.post('/settings', requireRole('admin'), (req, res) => {
@@ -56,9 +59,22 @@ router.post('/settings/run-now', requireStaff, async (req, res) => {
   res.redirect(req.get('referer') || '/');
 });
 
+// Heymarket: listar bandejas para encontrar HEYMARKET_INBOX_ID y HEYMARKET_CREATOR_ID
+router.post('/settings/heymarket-inboxes', requireRole('admin'), async (req, res) => {
+  const hasAuth = (process.env.HEYMARKET_SECRET_ID && process.env.HEYMARKET_SECRET_KEY) || process.env.HEYMARKET_API_KEY;
+  if (!hasAuth) { req.flash('error', 'Primero defina HEYMARKET_SECRET_ID y HEYMARKET_SECRET_KEY en el servidor.'); return res.redirect('/settings'); }
+  try {
+    const r = await providers.heymarket.inboxes();
+    const list = Array.isArray(r) ? r : r.inboxes || r.data || [r];
+    req.session.hmInboxes = JSON.stringify(list, null, 2).slice(0, 6000);
+    req.flash('ok', 'Bandejas de Heymarket obtenidas. Copie el "id" de la bandeja y el id de su usuario (creator) a las variables del servidor.');
+  } catch (e) { req.flash('error', e.message); }
+  res.redirect('/settings');
+});
+
 // Prueba de conexiones: envía un email y un SMS de prueba al usuario actual
 router.post('/settings/test-notify', requireRole('admin'), async (req, res) => {
-  const r = await notifyUser({ ...req.user, notify_email: 1, notify_sms: 1, active: 1 }, {
+  const r = await notifyUser({ ...req.user, notify_email: 1, notify_sms: 1, notify_whatsapp: 1, active: 1 }, {
     kind: 'prueba', subject: 'Prueba de conexión — Portal Portilla Law',
     text: 'Si recibe este mensaje, el envío automático de recordatorios está funcionando.',
     sms: 'Portilla Law: prueba de SMS del portal de cumplimiento. Funciona correctamente.',

@@ -36,24 +36,39 @@ services:
         sync: false
       - key: ADMIN_PHONE
         sync: false
-      # Email (SMTP)
-      - key: SMTP_HOST
+      # Email: Microsoft 365 vía Microsoft Graph (registro de aplicación en Entra ID)
+      - key: MS_TENANT_ID
         sync: false
-      - key: SMTP_PORT
-        value: "587"
-      - key: SMTP_USER
+      - key: MS_CLIENT_ID
         sync: false
-      - key: SMTP_PASS
+      - key: MS_CLIENT_SECRET
         sync: false
-      - key: MAIL_FROM
-        value: "Portilla Law Cumplimiento <cumplimiento@portillalaw.com>"
-      # SMS (Twilio)
-      - key: TWILIO_ACCOUNT_SID
+      - key: MS_SENDER
+        value: cumplimiento@portillalaw.com
+      # SMS: Heymarket (Settings > Integrations > API)
+      - key: HEYMARKET_SECRET_ID
         sync: false
-      - key: TWILIO_AUTH_TOKEN
+      - key: HEYMARKET_SECRET_KEY
         sync: false
-      - key: TWILIO_FROM
+      - key: HEYMARKET_INBOX_ID
         sync: false
+      - key: HEYMARKET_CREATOR_ID
+        sync: false
+      - key: HEYMARKET_WEBHOOK_TOKEN
+        generateValue: true
+      # WhatsApp Cloud API (Meta)
+      - key: WHATSAPP_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_TEMPLATE
+        value: aviso_portilla
+      - key: WHATSAPP_TEMPLATE_LANG
+        value: es
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        generateValue: true
       # Asistencia automática de Zoom (app Server-to-Server OAuth)
       - key: ZOOM_ACCOUNT_ID
         sync: false

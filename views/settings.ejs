@@ -1,8 +1,10 @@
 <%- include('partials/head') %>
 <div class="pagehead"><div><h1>Configuración de automatizaciones</h1><p class="sub">Email: <b><%= channels.email %></b> · SMS: <b><%= channels.sms %></b> · <a href="/audit">Registro de auditoría</a></p></div></div>
 <div class="card" style="max-width:760px"><h2>Conexiones de email y SMS</h2>
-  <p class="small">Email: <b><%= channels.email %></b> · SMS: <b><%= channels.sms %></b> · Asistencia Zoom: <b><%= channels.zoom %></b>. Las credenciales se configuran como variables de entorno en el servidor (ver DEPLOY.md).</p>
-  <form method="post" action="/settings/test-notify"><button class="btn ok">Enviarme un email y SMS de prueba</button></form>
+  <p class="small">Email: <b><%= channels.email %></b> · SMS: <b><%= channels.sms %></b> · WhatsApp: <b><%= channels.whatsapp %></b> · Asistencia Zoom: <b><%= channels.zoom %></b>. Las credenciales se configuran como variables de entorno en el servidor (ver DEPLOY.md).</p>
+  <form class="inline" method="post" action="/settings/test-notify"><button class="btn ok">Enviarme una prueba (email, SMS y WhatsApp)</button></form>
+  <form class="inline" method="post" action="/settings/heymarket-inboxes"><button class="btn ghost">Ver bandejas de Heymarket (IDs)</button></form>
+  <% if (inboxes) { %><pre class="small" style="white-space:pre-wrap;background:#f4f6f9;padding:.75rem;border-radius:7px;max-height:300px;overflow:auto"><%= inboxes %></pre><% } %>
 </div>
 <form method="post" action="/settings" class="card" style="max-width:760px">
   <% Object.entries(EDITABLE).forEach(function([k, label]){ %>

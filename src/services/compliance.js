@@ -311,7 +311,7 @@ async function notifyAssigned(assignmentId) {
     return notifyUser(empOf(a), {
       kind: 'asignacion', subject: `Nuevo video de adiestramiento: "${a.title}"`,
       text: `Hola ${a.emp_name},\n\nSe te asignó el video de adiestramiento "${a.title}" (${a.duration_min} min). Puedes verlo en el portal desde el ${fmt(a.starts_at)} hasta el ${due}.\n\nDebes ver al menos ${getSetting('video_min_pct')}% del video (adelantarlo no cuenta) y luego completar tu progress report. Recibirás recordatorios antes de la fecha límite.`,
-      sms: `Portilla Law: tienes un video de adiestramiento "${a.title}" para ver antes del ${due}:`,
+      sms: `Portilla Law: tienes un video de adiestramiento "${a.title}" para ver antes del ${due}. STOP para cancelar. Velo aqui:`,
       actions: [{ label: 'Ver el video', url: watchUrl(a), color: '#1b7f4b' }],
       assignmentId: a.id, dedupeKey: `asg:${a.id}`,
     });
@@ -319,7 +319,7 @@ async function notifyAssigned(assignmentId) {
   await notifyUser(empOf(a), {
     kind: 'asignacion', subject: `Nuevo entrenamiento asignado: "${a.title}"`,
     text: `Hola ${a.emp_name},\n\nSe te asignó el entrenamiento "${a.title}" (${a.modality}) para el ${fmt(a.starts_at)}.\n${whereText(a)}\n\nPor favor confirma tu asistencia. Recibirás recordatorios 24 horas, 12 horas, 1 hora, 30 minutos y 5 minutos antes.`,
-    sms: `Portilla Law: se te asigno "${a.title}" el ${fmt(a.starts_at)}. Responde SI o confirma aqui:`,
+    sms: `Portilla Law: se te asigno "${a.title}" el ${fmt(a.starts_at)}. Responde SI para confirmar (STOP para cancelar) o confirma aqui:`,
     actions: [{ label: 'Confirmar asistencia', url: links(a).confirm, color: '#1b7f4b' }],
     assignmentId: a.id, dedupeKey: `asg:${a.id}`,
   });
